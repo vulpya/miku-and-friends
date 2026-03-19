@@ -1,0 +1,3 @@
+<players root="gfx/characters/costumes/" portraitroot="gfx/ui/stage/" nameimageroot="gfx/ui/boss/">
+  <player name="Miku" skin="Character_Miku.png" nameimage="PlayerName_Miku.png" hp="6" portrait="PlayerPortrait_Miku.png" skinColor="-1" costume="104" costumeSuffix="miku" />
+</players>

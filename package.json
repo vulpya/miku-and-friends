@@ -1,0 +1,35 @@
+{
+  "name": "miku-and-friends",
+  "version": "0.1",
+  "description": "A mod adding Hatsune Miku and more Vocaloid-inspired content to The Binding of Isaac",
+  "keywords": [
+    "isaac",
+    "mod",
+    "rebirth",
+    "afterbirth",
+    "repentance",
+    "hatsune-miku",
+    "miku"
+  ],
+  "license": "GPL-3.0",
+  "type": "module",
+  "scripts": {
+    "build": "tstl",
+    "lint": "tsx ./scripts/lint.ts",
+    "nuke": "isaacscript nuke",
+    "publish": "isaacscript publish",
+    "start": "isaacscript monitor",
+    "update": "isaacscript update"
+  },
+  "dependencies": {
+    "isaac-typescript-definitions": "43.0.6",
+    "isaacscript-common": "87.9.6"
+  },
+  "devDependencies": {
+    "complete-node": "16.4.0",
+    "isaacscript": "6.0.2",
+    "isaacscript-lint": "7.3.2",
+    "typescript": "5.9.3",
+    "typescript-to-lua": "1.34.0"
+  }
+}
