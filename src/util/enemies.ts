@@ -1,5 +1,3 @@
-import { isActiveEnemy } from "isaacscript-common";
-
 /**
  * Attempts to apply the **Charm** status effect to an enemy entity.
  *
@@ -17,18 +15,16 @@ import { isActiveEnemy } from "isaacscript-common";
  *                  duration.
  * @returns `true` if the charm effect was successfully applied, otherwise `false`.
  * @example
+ * ```ts
  * // Charm a regular enemy for 5 seconds (150 frames)
  * charmEnemy(enemyEntity, 150);
+ * ```
  */
 export const charmEnemy = (
   entity: Entity,
   frames: number,
-  permanent?: boolean,
+  permanent = false,
 ): boolean => {
-  if (isActiveEnemy(entity) || entity.IsBoss()) {
-    entity.AddCharmed(EntityRef(entity), (permanent ?? false) ? -1 : frames);
-    return true;
-  }
-
-  return false;
+  entity.AddCharmed(EntityRef(entity), permanent ? -1 : frames);
+  return true;
 };

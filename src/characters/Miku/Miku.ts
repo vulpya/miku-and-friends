@@ -3,15 +3,24 @@ import type {
   EffectVariant,
   TearVariant,
 } from "isaac-typescript-definitions";
-import { EntityType, TearFlag } from "isaac-typescript-definitions";
-import { getPlayerFromEntity, spawnEffect } from "isaacscript-common";
+import { CollectibleType, EntityType } from "isaac-typescript-definitions";
+import {
+  getPlayerFromEntity,
+  isActiveEnemy,
+  spawnEffect,
+} from "isaacscript-common";
+import type { EIDExtended } from "../../compat/EID";
 import { charmEnemy } from "../../util/enemies";
-import { roll } from "../../util/rng";
+import { calcChance, rollFromChances, rollValue } from "../../util/rng";
 import { Character } from "../Character";
 
 const MIKU = {
   /** Internal character name for Miku. */
   NAME: "Miku",
+  /** Character description for Miku. */
+  DESCRIPTION: "Uses music to charm enemies. Some may even become fans!",
+  /** Birthright description for Miku. */
+  BIRTHRIGHT_DESC: "Chance to permanently charm enemies scales with Luck.",
   /** Player type for Miku. */
   TYPE: Isaac.GetPlayerTypeByName("Miku"),
   /** Costume ID for Miku's hair. */
@@ -22,10 +31,6 @@ const MIKU = {
   DAMAGE: -0.8,
   /** Base tears bonus for Miku. */
   TEARS: 0.5,
-  /** Base luck bonus for Miku. */
-  LUCK: 1,
-  /** Base tear flags for Miku. */
-  TEAR_FLAGS: TearFlag.CHARM,
 } as const;
 
 const NoteTear = {
@@ -61,8 +66,18 @@ export class MikuCharacter extends Character {
       moveSpeed: MIKU.SPEED,
       damage: MIKU.DAMAGE,
       tears: MIKU.TEARS,
-      luck: MIKU.LUCK,
     });
+
+    const ExEID = EID as EIDExtended | undefined;
+    if (!ExEID) {
+      return;
+    }
+
+    const icons = Sprite();
+    icons.Load("gfx/player_icons.anm2", true);
+    ExEID.addIcon(`Player${MIKU.TYPE}`, "Players", 0, 16, 16, 0, 0, icons);
+    ExEID.addCharacterInfo(MIKU.TYPE, MIKU.DESCRIPTION, MIKU.NAME);
+    ExEID.addBirthright(MIKU.TYPE, MIKU.BIRTHRIGHT_DESC, MIKU.NAME);
   }
 
   /**
@@ -132,10 +147,21 @@ export class MikuCharacter extends Character {
       return true;
     }
 
-    // TODO: Balance Boss charming / fan mechanic.
-    if (roll(NoteTear.FAN_CHANCE, player.Luck)) {
+    if (!isActiveEnemy(entity) || entity.IsInvincible() || entity.IsBoss()) {
+      return true;
+    }
+
+    const hasBirthright = player.HasCollectible(CollectibleType.BIRTHRIGHT);
+
+    const result = rollFromChances(
+      rollValue(),
+      calcChance(NoteTear.FAN_CHANCE, hasBirthright ? player.Luck : 0),
+      calcChance(NoteTear.CHARM_CHANCE, player.Luck),
+    );
+
+    if (result === 0) {
       charmEnemy(entity, NoteTear.CHARM_DURATION, true);
-    } else if (roll(NoteTear.CHARM_CHANCE, player.Luck)) {
+    } else if (result === 1) {
       charmEnemy(entity, NoteTear.CHARM_DURATION);
     }
 
