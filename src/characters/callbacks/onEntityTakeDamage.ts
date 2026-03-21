@@ -2,7 +2,7 @@ import { ModCallback } from "isaac-typescript-definitions";
 import { getPlayerFromEntity } from "isaacscript-common";
 import { CHARACTERS } from "..";
 
-export function registerOnEntityTakeDamage(mod: Mod): void {
+export const registerOnEntityTakeDamage = (mod: Mod): void => {
   mod.AddCallback(
     ModCallback.ENTITY_TAKE_DMG,
     (entity, amount, flags, source, frames) => {
@@ -31,4 +31,4 @@ export function registerOnEntityTakeDamage(mod: Mod): void {
       return true;
     },
   );
-}
+};

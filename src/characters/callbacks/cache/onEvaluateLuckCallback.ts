@@ -1,7 +1,7 @@
 import { CacheFlag, ModCallback } from "isaac-typescript-definitions";
 import { CHARACTERS } from "../..";
 
-export function registerEvaluateLuckCallback(mod: Mod): void {
+export const registerEvaluateLuckCallback = (mod: Mod): void => {
   mod.AddCallback(
     ModCallback.EVALUATE_CACHE,
     (player: EntityPlayer) => {
@@ -13,4 +13,4 @@ export function registerEvaluateLuckCallback(mod: Mod): void {
     },
     CacheFlag.LUCK,
   );
-}
+};

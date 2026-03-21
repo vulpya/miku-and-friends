@@ -1,0 +1,3 @@
+<items gfxroot="gfx/items/" version="1">
+  <active gfx="microphone.png" name="Microphone" description="Sing your heart out" quality="4" maxcharges="8" chargetype="normal" />
+</items>

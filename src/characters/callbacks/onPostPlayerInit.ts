@@ -1,7 +1,7 @@
 import { ModCallback } from "isaac-typescript-definitions";
 import { CHARACTERS } from "..";
 
-export function registerPostPlayerInitCallback(mod: Mod): void {
+export const registerPostPlayerInitCallback = (mod: Mod): void => {
   mod.AddCallback(ModCallback.POST_PLAYER_INIT, (player) => {
     for (const character of CHARACTERS) {
       if (character.isPlayer(player)) {
@@ -10,4 +10,4 @@ export function registerPostPlayerInitCallback(mod: Mod): void {
       }
     }
   });
-}
+};

@@ -1,7 +1,7 @@
 import { CacheFlag, ModCallback } from "isaac-typescript-definitions";
 import { CHARACTERS } from "../..";
 
-export function registerEvaluateFireDelayCallback(mod: Mod): void {
+export const registerEvaluateFireDelayCallback = (mod: Mod): void => {
   mod.AddCallback(
     ModCallback.EVALUATE_CACHE,
     (player: EntityPlayer) => {
@@ -13,4 +13,4 @@ export function registerEvaluateFireDelayCallback(mod: Mod): void {
     },
     CacheFlag.FIRE_DELAY,
   );
-}
+};

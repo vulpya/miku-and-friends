@@ -1,4 +1,4 @@
-const DEBUG = true;
+import { Debugger } from "./debug";
 
 /**
  * This function returns the luck bonus.
@@ -61,14 +61,12 @@ export const calcChance = (percent: number, luck = 0): number => {
   const finalChance = percent + bonus;
   const clampedChance = Math.max(0, Math.min(finalChance, 100));
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (DEBUG) {
-    print(
-      `Base percent: ${percent}, Luck: ${luck.toFixed(1)}, Luck Bonus: ${bonus.toFixed(2)}, Chance: ${clampedChance.toFixed(
-        2,
-      )}%`,
-    );
-  }
+  Debugger.rng(
+    "calcChance",
+    `Base percent: ${percent}, Luck: ${luck.toFixed(1)}, Luck Bonus: ${bonus.toFixed(1)}, Chance: ${clampedChance.toFixed(
+      2,
+    )}%`,
+  );
 
   return clampedChance;
 };

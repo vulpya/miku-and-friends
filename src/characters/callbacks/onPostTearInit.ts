@@ -2,7 +2,7 @@ import { ModCallback } from "isaac-typescript-definitions";
 import { getPlayerFromEntity } from "isaacscript-common";
 import { CHARACTERS } from "..";
 
-export function registerPostTearInit(mod: Mod): void {
+export const registerPostTearInit = (mod: Mod): void => {
   mod.AddCallback(ModCallback.POST_TEAR_INIT, (tear) => {
     const player = getPlayerFromEntity(tear);
 
@@ -17,4 +17,4 @@ export function registerPostTearInit(mod: Mod): void {
       }
     }
   });
-}
+};

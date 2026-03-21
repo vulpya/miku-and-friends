@@ -2,7 +2,7 @@ import type { ModUpgraded } from "isaacscript-common";
 import { ModCallbackCustom } from "isaacscript-common";
 import { CHARACTERS } from "..";
 
-export function registerPostPEffectUpdateReordered(mod: ModUpgraded): void {
+export const registerPostPEffectUpdateReordered = (mod: ModUpgraded): void => {
   mod.AddCallbackCustom(
     ModCallbackCustom.POST_PEFFECT_UPDATE_REORDERED,
     (player) => {
@@ -13,4 +13,4 @@ export function registerPostPEffectUpdateReordered(mod: ModUpgraded): void {
       }
     },
   );
-}
+};

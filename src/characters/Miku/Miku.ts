@@ -3,13 +3,18 @@ import type {
   EffectVariant,
   TearVariant,
 } from "isaac-typescript-definitions";
-import { CollectibleType, EntityType } from "isaac-typescript-definitions";
+import {
+  ActiveSlot,
+  CollectibleType,
+  EntityType,
+} from "isaac-typescript-definitions";
 import {
   getPlayerFromEntity,
   isActiveEnemy,
   spawnEffect,
 } from "isaacscript-common";
 import type { EIDExtended } from "../../compat/EID";
+import { Debugger } from "../../util/debug";
 import { charmEnemy } from "../../util/enemies";
 import { calcChance, rollFromChances, rollValue } from "../../util/rng";
 import { Character } from "../Character";
@@ -25,6 +30,8 @@ const MIKU = {
   TYPE: Isaac.GetPlayerTypeByName("Miku"),
   /** Costume ID for Miku's hair. */
   HAIR: Isaac.GetCostumeIdByPath("gfx/characters/Character_MikuHead.anm2"),
+  /** Microphone item type for Miku starting item. */
+  MICROPHONE: Isaac.GetItemIdByName("Microphone"),
   /** Base move speed bonus for Miku. */
   SPEED: 0.15,
   /** Base damage bonus for Miku. */
@@ -43,7 +50,7 @@ const NoteTear = {
   /** Chance to charm an enemy permanently in percent. */
   FAN_CHANCE: 3,
   /** Duration of the charm effect in `seconds * frames`. */
-  CHARM_DURATION: 2 * 30,
+  CHARM_DURATION: 3 * 30,
   /**
    * Spawns splash effect `NoteTear.SPLASH` and plays the animation for the `NoteTear`.
    *
@@ -67,29 +74,25 @@ export class MikuCharacter extends Character {
       damage: MIKU.DAMAGE,
       tears: MIKU.TEARS,
     });
-
-    const ExEID = EID as EIDExtended | undefined;
-    if (!ExEID) {
-      return;
-    }
-
-    const icons = Sprite();
-    icons.Load("gfx/player_icons.anm2", true);
-    ExEID.addIcon(`Player${MIKU.TYPE}`, "Players", 0, 16, 16, 0, 0, icons);
-    ExEID.addCharacterInfo(MIKU.TYPE, MIKU.DESCRIPTION, MIKU.NAME);
-    ExEID.addBirthright(MIKU.TYPE, MIKU.BIRTHRIGHT_DESC, MIKU.NAME);
   }
 
   /**
    * Called after Miku is initialized.
    *
-   * Adds Miku's hair costume.
+   * Adds Miku's hair costume & gives Miku's starting item, the Microphone.
    *
    * @param player The player entity being initialized.
    * @see {@link EntityPlayer} The entity player class.
    */
   override onPostPlayerInit(player: EntityPlayer): void {
     player.AddNullCostume(MIKU.HAIR);
+    Debugger.char(MIKU.NAME, `Miku: applied null costume: ${MIKU.HAIR}`);
+
+    if (!player.HasCollectible(MIKU.MICROPHONE)) {
+      player.AddCollectible(MIKU.MICROPHONE);
+      player.FullCharge(ActiveSlot.PRIMARY, true);
+      Debugger.char(MIKU.NAME, "Give microphone active item");
+    }
   }
 
   /**
@@ -126,8 +129,6 @@ export class MikuCharacter extends Character {
    * @see {@link NoteTear.CHARM_CHANCE} - Base chance to charm an enemy temporarily on hit.
    * @see {@link NoteTear.CHARM_DURATION} - Duration of the temporary charm effect.
    * @see {@link NoteTear.FAN_CHANCE} - Chance to permanently charm an enemy on hit.
-   * @see {@link Entity} - Base class for all entities.
-   * @see {@link EntityRef} - Reference wrapper used for entities.
    * @see {@link getPlayerFromEntity} - Utility to get the player responsible for a given entity.
    * @see {@link charmEnemy} - Function used to apply the charm effect to an entity.
    */
@@ -147,7 +148,11 @@ export class MikuCharacter extends Character {
       return true;
     }
 
-    if (!isActiveEnemy(entity) || entity.IsInvincible() || entity.IsBoss()) {
+    if (
+      !isActiveEnemy(entity)
+      || !entity.IsVulnerableEnemy()
+      || entity.IsBoss()
+    ) {
       return true;
     }
 
@@ -161,8 +166,13 @@ export class MikuCharacter extends Character {
 
     if (result === 0) {
       charmEnemy(entity, NoteTear.CHARM_DURATION, true);
+      Debugger.char(MIKU.NAME, "Enemy charmed permanently");
     } else if (result === 1) {
       charmEnemy(entity, NoteTear.CHARM_DURATION);
+      Debugger.char(
+        MIKU.NAME,
+        `Enemy charmed for ${NoteTear.CHARM_DURATION / 30}s`,
+      );
     }
 
     return true;
@@ -171,7 +181,7 @@ export class MikuCharacter extends Character {
   /**
    * Called after a tear from Miku was killed.
    *
-   * Spawns the `NoteTear` splash effect.
+   * Spawns the {@link NoteTear.SPLASH} splash effect.
    *
    * @param tear The tear entity that was killed.
    * @see {@link EntityTear} Represents a tear projectile.
@@ -179,5 +189,23 @@ export class MikuCharacter extends Character {
    */
   override onPostTearKill(tear: EntityTear): void {
     NoteTear.splash(tear);
+  }
+
+  /**
+   * Sets up **External Item Descriptions (EID)** compatibility for Miku.
+   *
+   * This method registers the player icon, character info, and birthright description with EID, so
+   * that in-game tooltips display properly for Miku.
+   *
+   * @param eid The `EIDExtended` instance used to add compatibility.
+   * @see {@link EIDExtended}
+   */
+  override setupEID(eid: EIDExtended): void {
+    const icons = Sprite();
+    icons.Load("gfx/player_icons.anm2", true);
+    eid.addIcon(`Player${MIKU.TYPE}`, "Players", 0, 16, 16, 0, 0, icons);
+    eid.addCharacterInfo(MIKU.TYPE, MIKU.DESCRIPTION, MIKU.NAME);
+    eid.addBirthright(MIKU.TYPE, MIKU.BIRTHRIGHT_DESC, MIKU.NAME);
+    Debugger.char(MIKU.NAME, "Setup EID compatibility");
   }
 }

@@ -5,6 +5,7 @@ import type {
   TearFlag,
 } from "isaac-typescript-definitions";
 import { addTearsStat, bitFlags } from "isaacscript-common";
+import type { EIDExtended } from "../compat/EID";
 
 /** Configuration data used to define a character. */
 interface CharacterData {
@@ -45,6 +46,12 @@ export abstract class Character {
    */
   constructor(data: CharacterData) {
     this.data = data;
+    if (this.setupEID) {
+      const ExEID = EID as EIDExtended | undefined;
+      if (ExEID) {
+        this.setupEID(ExEID);
+      }
+    }
   }
 
   /**
@@ -140,4 +147,12 @@ export abstract class Character {
     source: EntityRef,
     countdownFrames: int,
   ): boolean;
+
+  /**
+   * Sets up **External Item Descriptions (EID)** compatibility for a custom character.
+   *
+   * @param eid The `EIDExtended` instance used to add compatibility.
+   * @see {@link EIDExtended}
+   */
+  setupEID?(eid: EIDExtended): void;
 }

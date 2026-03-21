@@ -8,8 +8,9 @@ A mod adding Hatsune Miku and more Vocaloid-inspired content to The Binding of I
 
 ### Hatsune Miku
 
-Miku uses her musical tears to charm enemies, letting her music sway even the fiercest foes.
-There is even a small chance an enemy becomes a fan!
+Miku uses music to charm enemies. Some may even become fans!.
+Her tears have a small chance to charm enemies.
+There is also a very small chance to charm an enemy permanently.
 
 ## Disclaimer
 

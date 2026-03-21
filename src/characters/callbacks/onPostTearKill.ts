@@ -2,7 +2,7 @@ import type { ModUpgraded } from "isaacscript-common";
 import { getPlayerFromEntity, ModCallbackCustom } from "isaacscript-common";
 import { CHARACTERS } from "..";
 
-export function registerPostTearKill(mod: ModUpgraded): void {
+export const registerPostTearKill = (mod: ModUpgraded): void => {
   mod.AddCallbackCustom(ModCallbackCustom.POST_TEAR_KILL, (tear) => {
     const player = getPlayerFromEntity(tear);
 
@@ -17,4 +17,4 @@ export function registerPostTearKill(mod: ModUpgraded): void {
       }
     }
   });
-}
+};

@@ -18,7 +18,7 @@ const registerCache = (mod: ModUpgraded) => {
   registerEvaluateFireDelayCallback(mod);
 };
 
-export function registerCharacterCallbacks(mod: ModUpgraded): void {
+export const registerCharacterCallbacks = (mod: ModUpgraded): void => {
   registerCache(mod);
 
   registerPostPlayerInitCallback(mod);
@@ -26,4 +26,4 @@ export function registerCharacterCallbacks(mod: ModUpgraded): void {
   registerPostTearInit(mod);
   registerPostTearKill(mod);
   registerOnEntityTakeDamage(mod);
-}
+};
