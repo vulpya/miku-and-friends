@@ -3,12 +3,13 @@ import type {
   CollectibleType,
   UseFlag,
 } from "isaac-typescript-definitions";
-import { getEntities } from "isaacscript-common";
+import { ModCallback } from "isaac-typescript-definitions";
+import { Callback, getEntities } from "isaacscript-common";
 import type { EIDExtended } from "../../compat/EID";
 import { Debugger } from "../../util/debug";
 import { charmEnemy, isCharmableEnemy } from "../../util/enemies";
+import type { UseItemResult } from "../ActiveItem";
 import { ActiveItem } from "../ActiveItem";
-import type { UseItemResult } from "../Item";
 
 const MICROPHONE = {
   /** Item name for the Microphone. */
@@ -20,12 +21,23 @@ const MICROPHONE = {
 } as const;
 
 export class MicrophoneItem extends ActiveItem {
-  constructor() {
-    super({
-      name: MICROPHONE.NAME,
-      type: MICROPHONE.TYPE,
-      description: MICROPHONE.DESCRIPTION,
-    });
+  static getType(): CollectibleType {
+    return MICROPHONE.TYPE;
+  }
+
+  /** Returns the display name of the active item. */
+  get name(): string {
+    return MICROPHONE.NAME;
+  }
+
+  /** Returns the type of the active item. */
+  get type(): CollectibleType {
+    return MicrophoneItem.getType();
+  }
+
+  /** Returns the description of the active item. */
+  get description(): string {
+    return MICROPHONE.DESCRIPTION;
   }
 
   /**
@@ -39,6 +51,7 @@ export class MicrophoneItem extends ActiveItem {
    * - Keeps the item
    * - Plays the use animation
    */
+  @Callback(ModCallback.POST_USE_ITEM, MICROPHONE.TYPE)
   override onPostUseItem(
     _collectibleType: CollectibleType,
     _rng: RNG,
@@ -57,7 +70,7 @@ export class MicrophoneItem extends ActiveItem {
       count++;
     }
 
-    Debugger.item(this.config.name, `Turned ${count} enemies into fan(s).`);
+    Debugger.item(this.name, `Turned ${count} enemies into fan(s).`);
 
     return {
       Discharge: true,
@@ -66,17 +79,8 @@ export class MicrophoneItem extends ActiveItem {
     };
   }
 
-  /**
-   * Sets up **External Item Descriptions (EID)** compatibility for the Microphone.
-   *
-   * This method registers the collectible description with EID, so that in-game tooltips display
-   * properly for the Microphone.
-   *
-   * @param eid The `EIDExtended` instance used to add compatibility.
-   * @see {@link EIDExtended}
-   */
   override setupEID(eid: EIDExtended): void {
-    eid.addCollectible(this.config.type, this.config.description);
-    Debugger.item(this.config.name, "Setup EID compatibility");
+    eid.addCollectible(this.type, this.description);
+    Debugger.item(this.name, "Setup EID compatibility");
   }
 }

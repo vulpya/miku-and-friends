@@ -1,40 +1,15 @@
-import type { CollectibleType } from "isaac-typescript-definitions";
+import type { ModUpgraded } from "isaacscript-common";
+import { ModFeature } from "isaacscript-common";
 import type { EIDExtended } from "../compat/EID";
 
-/** Result of the `onPostUseItem` callback. */
-export interface UseItemResult {
-  Discharge: boolean;
-  Remove: boolean;
-  ShowAnim: boolean;
-}
-
-/** Configuration used to define a item. */
-export interface ItemConfig {
-  /** The name of the item. */
-  name: string;
-  /** The id of the item. */
-  type: CollectibleType;
-  /** The description of the item (Used for EID). */
-  description: string;
-}
-
 /** Abstract base class representing a custom item. */
-export abstract class Item<T = ItemConfig> {
-  /** Item configuration. */
-  public readonly config: T;
-
-  /**
-   * Creates a new item definition.
-   *
-   * @param data Item configuration data.
-   */
-  constructor(data: T) {
-    this.config = data;
-    if (this.setupEID) {
-      const ExEID = EID as EIDExtended | undefined;
-      if (ExEID) {
-        this.setupEID(ExEID);
-      }
+export abstract class Item extends ModFeature {
+  /** Creates a new item definition. */
+  constructor(mod: ModUpgraded, init?: boolean) {
+    super(mod, init);
+    const ExEID = EID as EIDExtended | undefined;
+    if (this.setupEID && ExEID) {
+      this.setupEID(ExEID);
     }
   }
 

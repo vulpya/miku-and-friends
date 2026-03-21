@@ -1,7 +1,7 @@
 const DEBUG = {
-  RNG: false,
-  CHARACTERS: false,
-  ITEMS: false,
+  RNG: true,
+  CHARACTERS: true,
+  ITEMS: true,
 } as const;
 
 /** Debugging utility functions for the mod. */

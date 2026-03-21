@@ -3,30 +3,18 @@ import type {
   CollectibleType,
   UseFlag,
 } from "isaac-typescript-definitions";
-import type { ItemConfig, UseItemResult } from "./Item";
 import { Item } from "./Item";
 
-interface ActiveItemData extends ItemConfig {
-  /** `true`, if the item is an active item or not. */
-  active: boolean;
+/** Result of the `ModCallback.POST_USE_ITEM` callback. */
+export interface UseItemResult {
+  Discharge: boolean;
+  Remove: boolean;
+  ShowAnim: boolean;
 }
 
 /** Abstract base class representing a custom active item. */
-export abstract class ActiveItem extends Item<ActiveItemData> {
-  /** Item configuration data. */
-  public readonly active = true;
-
-  /**
-   * Creates a new active item definition.
-   *
-   * @param data Item configuration data.
-   */
-  constructor(data: ItemConfig) {
-    super({
-      ...data,
-      active: true,
-    });
-  }
+export abstract class ActiveItem extends Item {
+  protected readonly active = true;
 
   /**
    * Called after an active item is used.
