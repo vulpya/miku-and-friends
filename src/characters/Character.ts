@@ -1,5 +1,6 @@
 import type {
   CacheFlag,
+  CollectibleType,
   DamageFlag,
   PlayerType,
   TearFlag,
@@ -7,13 +8,19 @@ import type {
 import { addTearsStat, bitFlags } from "isaacscript-common";
 import type { EIDExtended } from "../compat/EID";
 
-/** Configuration data used to define a character. */
-interface CharacterData {
+/** Configuration used to define a character. */
+export interface CharacterConfig {
   /** The name of the character. */
   name: string;
 
   /** Type of the character. */
   type: PlayerType;
+
+  /** Description of the character (Used for EID). */
+  description: string;
+
+  /** Description of the Birthright Effect of the character (Used for EID). */
+  birthrightDesc: string;
 
   /** Whether this is the tainted version of the character. */
   tainted?: boolean;
@@ -21,37 +28,80 @@ interface CharacterData {
   /** Base movement speed bonus. */
   moveSpeed?: number;
 
-  /** Base tears bonus. */
-  tears?: number;
-
   /** Base damage bonus. */
   damage?: number;
+
+  /** Base tears bonus. */
+  tears?: number;
 
   /** Base luck bonus. */
   luck?: number;
 
   /** Base tear flags. */
   tearFlags?: TearFlag | BitFlags<TearFlag>;
+
+  /** Active pocket item for character. */
+  pocketActive?: CollectibleType;
 }
 
 /** Abstract base class representing a custom character. */
-export abstract class Character {
-  /** Character configuration data. */
-  public readonly data: CharacterData;
+export abstract class Character<T extends CharacterConfig = CharacterConfig> {
+  /** Character configuration. */
+  protected readonly config: T;
 
   /**
    * Creates a new character definition.
    *
-   * @param data Character configuration data.
+   * @param config Character configuration.
    */
-  constructor(data: CharacterData) {
-    this.data = data;
+  constructor(config: T) {
+    this.config = config;
     if (this.setupEID) {
       const ExEID = EID as EIDExtended | undefined;
       if (ExEID) {
         this.setupEID(ExEID);
       }
     }
+  }
+
+  get name(): string {
+    return this.config.name;
+  }
+
+  get type(): PlayerType {
+    return this.config.type;
+  }
+
+  get description(): string {
+    return this.config.description;
+  }
+
+  get birthright(): string {
+    return this.config.birthrightDesc;
+  }
+
+  get moveSpeed(): number | undefined {
+    return this.config.moveSpeed;
+  }
+
+  get damage(): number | undefined {
+    return this.config.damage;
+  }
+
+  get tears(): number | undefined {
+    return this.config.tears;
+  }
+
+  get luck(): number | undefined {
+    return this.config.luck;
+  }
+
+  get tearFlags(): TearFlag | BitFlags<TearFlag> | undefined {
+    return this.config.tearFlags;
+  }
+
+  get pocketActive(): CollectibleType | undefined {
+    return this.config.pocketActive;
   }
 
   /**
@@ -61,7 +111,7 @@ export abstract class Character {
    * @returns `true` if the player is this character type.
    */
   isPlayer(player: EntityPlayer): boolean {
-    return player.GetPlayerType() === this.data.type;
+    return player.GetPlayerType() === this.config.type;
   }
 
   /**
@@ -79,7 +129,7 @@ export abstract class Character {
    * @see {@link EntityPlayer} - The entity player class.
    */
   onEvaluateDamage(player: EntityPlayer): void {
-    player.Damage += this.data.damage ?? 0;
+    player.Damage += this.config.damage ?? 0;
   }
 
   /**
@@ -89,7 +139,7 @@ export abstract class Character {
    * @see {@link EntityPlayer} - The entity player class.
    */
   onEvaluateSpeed(player: EntityPlayer): void {
-    player.MoveSpeed += this.data.moveSpeed ?? 0;
+    player.MoveSpeed += this.config.moveSpeed ?? 0;
   }
 
   /**
@@ -99,7 +149,7 @@ export abstract class Character {
    * @see {@link EntityPlayer} - The entity player class.
    */
   onEvaluateLuck(player: EntityPlayer): void {
-    player.Luck += this.data.luck ?? 0;
+    player.Luck += this.config.luck ?? 0;
   }
 
   /**
@@ -109,7 +159,7 @@ export abstract class Character {
    * @see {@link EntityPlayer} - The entity player class.
    */
   onEvaluateFireDelay(player: EntityPlayer): void {
-    addTearsStat(player, this.data.tears ?? 0);
+    addTearsStat(player, this.config.tears ?? 0);
   }
 
   /**
@@ -119,8 +169,8 @@ export abstract class Character {
    * @see {@link EntityPlayer} - The entity player class.
    */
   onEvaluateTearFlags(player: EntityPlayer): void {
-    if (this.data.tearFlags) {
-      player.TearFlags = bitFlags(this.data.tearFlags);
+    if (this.config.tearFlags) {
+      player.TearFlags = bitFlags(this.config.tearFlags);
     }
   }
 

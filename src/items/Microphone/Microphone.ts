@@ -3,12 +3,12 @@ import type {
   CollectibleType,
   UseFlag,
 } from "isaac-typescript-definitions";
-import { isActiveEnemy } from "isaacscript-common";
+import { getEntities } from "isaacscript-common";
 import type { EIDExtended } from "../../compat/EID";
 import { Debugger } from "../../util/debug";
-import { charmEnemy } from "../../util/enemies";
+import { charmEnemy, isCharmableEnemy } from "../../util/enemies";
+import { ActiveItem } from "../ActiveItem";
 import type { UseItemResult } from "../Item";
-import { Item } from "../Item";
 
 const MICROPHONE = {
   /** Item name for the Microphone. */
@@ -19,11 +19,12 @@ const MICROPHONE = {
   TYPE: Isaac.GetItemIdByName("Microphone"),
 } as const;
 
-export class MicrophoneItem extends Item {
+export class MicrophoneItem extends ActiveItem {
   constructor() {
     super({
       name: MICROPHONE.NAME,
       type: MICROPHONE.TYPE,
+      description: MICROPHONE.DESCRIPTION,
     });
   }
 
@@ -35,7 +36,7 @@ export class MicrophoneItem extends Item {
    *
    * @returns A {@link UseItemResult} object that:
    * - Discharges the item (consumes its charge)
-   * - Keeps the item (does not remove it)
+   * - Keeps the item
    * - Plays the use animation
    */
   override onPostUseItem(
@@ -46,21 +47,17 @@ export class MicrophoneItem extends Item {
     _slot: ActiveSlot,
     _data: int,
   ): boolean | UseItemResult {
-    const entities = Isaac.GetRoomEntities();
-    let count = 0;
+    const enemies = getEntities(-1, -1, -1, true).filter((e) =>
+      isCharmableEnemy(e),
+    );
 
-    for (const entity of entities) {
-      if (
-        isActiveEnemy(entity)
-        && entity.IsVulnerableEnemy()
-        && !entity.IsBoss()
-      ) {
-        charmEnemy(entity, 0, true);
-        count++;
-      }
+    let count = 0;
+    for (const enemy of enemies) {
+      charmEnemy(enemy, 0, true);
+      count++;
     }
 
-    Debugger.item(MICROPHONE.NAME, `Turned ${count} enemies into fan(s).`);
+    Debugger.item(this.config.name, `Turned ${count} enemies into fan(s).`);
 
     return {
       Discharge: true,
@@ -79,7 +76,7 @@ export class MicrophoneItem extends Item {
    * @see {@link EIDExtended}
    */
   override setupEID(eid: EIDExtended): void {
-    eid.addCollectible(MICROPHONE.TYPE, MICROPHONE.DESCRIPTION);
-    Debugger.item(MICROPHONE.NAME, "Setup EID compatibility");
+    eid.addCollectible(this.config.type, this.config.description);
+    Debugger.item(this.config.name, "Setup EID compatibility");
   }
 }

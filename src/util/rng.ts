@@ -63,7 +63,7 @@ export const calcChance = (percent: number, luck = 0): number => {
 
   Debugger.rng(
     "calcChance",
-    `Base percent: ${percent}, Luck: ${luck.toFixed(1)}, Luck Bonus: ${bonus.toFixed(1)}, Chance: ${clampedChance.toFixed(
+    `Base percent: ${percent.toFixed(2)}%, Luck: ${luck.toFixed(2)}, Luck Bonus: ${bonus.toFixed(2)}, Chance: ${clampedChance.toFixed(
       2,
     )}%`,
   );
@@ -105,8 +105,11 @@ export const calcChance = (percent: number, luck = 0): number => {
  * }
  * ```
  */
-// eslint-disable-next-line complete/prefer-readonly-parameter-types
-export const rollFromChances = (roll: number, ...chances: number[]): number => {
+
+export const rollFromChances = (
+  roll: number = rollValue(),
+  ...chances: readonly number[]
+): number => {
   let cumulative = 0;
 
   for (const [i, chance] of chances.entries()) {

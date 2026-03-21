@@ -1,3 +1,5 @@
+import { isActiveEnemy } from "isaacscript-common";
+
 /**
  * Attempts to apply the **Charm** status effect to an enemy entity.
  *
@@ -28,3 +30,23 @@ export const charmEnemy = (
   entity.AddCharmed(EntityRef(entity), permanent ? -1 : frames);
   return true;
 };
+
+/**
+ * Determines whether an entity is a valid target for the **Charm** effect.
+ *
+ * An entity is considered charmable if:
+ * - It is an **active enemy** (alive and not inactive).
+ * - It is **vulnerable** (can take damage and interact with effects).
+ * - It is **not a boss**.
+ *
+ * @param entity The entity to evaluate.
+ * @returns `true` if the entity can be charmed, otherwise `false`.
+ * @example
+ * ```ts
+ * if (IsCharmableEnemy(entity)) {
+ *   charmEnemy(entity, 90); // Charm for 90 frames (3 seconds)
+ * }
+ * ```
+ */
+export const isCharmableEnemy = (entity: Entity): boolean =>
+  isActiveEnemy(entity) && entity.IsVulnerableEnemy() && !entity.IsBoss();

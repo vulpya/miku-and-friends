@@ -3,7 +3,7 @@ import { ITEMS } from "..";
 import type { UseItemResult } from "../Item";
 
 export const registerPostUseItem = (mod: Mod): void => {
-  for (const item of ITEMS) {
+  for (const item of ITEMS.filter((i) => i.config.active)) {
     mod.AddCallback(
       ModCallback.POST_USE_ITEM,
       (
@@ -23,7 +23,7 @@ export const registerPostUseItem = (mod: Mod): void => {
           activeSlot,
           customVarData,
         ),
-      item.data.type,
+      item.config.type,
     );
   }
 };
