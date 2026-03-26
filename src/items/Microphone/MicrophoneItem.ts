@@ -21,21 +21,26 @@ const MICROPHONE = {
 } as const;
 
 export class MicrophoneItem extends ActiveItem {
+  /**
+   * Static accessor for the `Microphone` collectible ID.
+   *
+   * @returns The {@link CollectibleType} assigned to this item.
+   */
   static getType(): CollectibleType {
     return MICROPHONE.TYPE;
   }
 
-  /** Returns the display name of the active item. */
+  /** Display name of the item as shown in-game. */
   get name(): string {
     return MICROPHONE.NAME;
   }
 
-  /** Returns the type of the active item. */
+  /** The {@link CollectibleType} identifier for this item. */
   get type(): CollectibleType {
     return MicrophoneItem.getType();
   }
 
-  /** Returns the description of the active item. */
+  /** Description text shown in item tooltips or external description mods. */
   get description(): string {
     return MICROPHONE.DESCRIPTION;
   }
@@ -59,7 +64,7 @@ export class MicrophoneItem extends ActiveItem {
     _flags: BitFlags<UseFlag>,
     _slot: ActiveSlot,
     _data: int,
-  ): boolean | UseItemResult {
+  ): UseItemResult {
     const enemies = getEntities(-1, -1, -1, true).filter((e) =>
       isCharmableEnemy(e),
     );
@@ -81,6 +86,6 @@ export class MicrophoneItem extends ActiveItem {
 
   override setupEID(eid: EIDExtended): void {
     eid.addCollectible(this.type, this.description);
-    Debugger.item(this.name, "Setup EID compatibility");
+    Debugger.item(this.name, "Setup EID compatibility.");
   }
 }

@@ -1,8 +1,8 @@
 <AnimatedActor>
-	<Info CreatedBy="Vulpya" CreatedOn="3/21/2026 8:32:35 PM" Version="150" Fps="30"/>
+	<Info CreatedBy="Vulpya" CreatedOn="3/22/2026 5:08:23 PM" Version="152" Fps="30"/>
 	<Content>
 		<Spritesheets>
-			<Spritesheet Path="Character_MikuHead.png" Id="0"/>
+			<Spritesheet Path="costumes\Character_MikuHead.png" Id="0"/>
 		</Spritesheets>
 		<Layers>
 			<Layer Name="head0" Id="0" SpritesheetId="0"/>

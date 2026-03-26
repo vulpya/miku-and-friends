@@ -2,6 +2,7 @@ const DEBUG = {
   RNG: true,
   CHARACTERS: true,
   ITEMS: true,
+  TEAR: true,
 } as const;
 
 /** Debugging utility functions for the mod. */
@@ -52,5 +53,12 @@ export const Debugger = {
       return;
     }
     print(`[RNG\\${name}]: ${message}`);
+  },
+  tear: (name: string, message: string): void => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (!DEBUG.TEAR) {
+      return;
+    }
+    print(`[Tear\\${name}]: ${message}`);
   },
 } as const;

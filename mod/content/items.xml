@@ -1,5 +1,5 @@
 <items gfxroot="gfx/items/" version="1">
-  <passive id="1" gfx="virtual_idol.png" name="Virtual Idol" description="Idol Charm" quality="3" />
+  <passive id="1000" gfx="virtual_idol.png" name="Virtual Idol" description="Idol Charm" quality="3" />
   <active gfx="microphone.png" name="Microphone" description="Sing your heart out" quality="4" maxcharges="8" chargetype="normal" />
-  <null id="1" name="Miku Virtual Idol" cache="collectibles" />
+  <null name="Miku Idol" cache="collectibles" />
 </items>
