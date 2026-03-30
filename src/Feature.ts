@@ -24,6 +24,13 @@ export abstract class Feature extends ModFeature {
   postPlayerInit?(player: EntityPlayer): void;
 
   /**
+   * Optional callback triggered ever frame a player is updated.
+   *
+   * @param player The player entity being updated.
+   */
+  postPlayerUpdate?(player: EntityPlayer): void;
+
+  /**
    * Optional callback to recalculate the player's movement speed.
    *
    * @param player The player whose movement speed is being recalculated.
@@ -45,11 +52,34 @@ export abstract class Feature extends ModFeature {
   cacheDamage?(player: EntityPlayer): void;
 
   /**
+   * Optional callback to recalculate the player's tear flags.
+   *
+   * @param player The player whose tear flags are being recalculated.
+   */
+  cacheTearFlags?(player: EntityPlayer): void;
+
+  /**
+   * Optional callback triggered after a tear was fired.
+   *
+   * @param tear The tear entity that was just fired.
+   */
+  postFireTear?(tear: EntityTear): void;
+
+  /**
    * Optional callback triggered after a tear is created (spawned).
    *
    * @param tear The tear entity that was just initialized.
    */
   postTearInit?(tear: EntityTear): void;
+
+  /**
+   * Optional callback triggered every frame while a tear exists.
+   *
+   * Can be used to modify movement, appearance, or behavior over time.
+   *
+   * @param tear The tear entity being updated.
+   */
+  postTearUpdate?(tear: EntityTear): void;
 
   /**
    * Optional callback triggered after a tear is destroyed.
@@ -78,6 +108,27 @@ export abstract class Feature extends ModFeature {
     source: EntityRef,
     frames: int,
   ): boolean;
+
+  /**
+   * Optional callback triggered after npc entity was initialized.
+   *
+   * @param npc The npc entity that was initialized.
+   */
+  postNPCInit?(npc: EntityNPC): void;
+
+  /**
+   * Optional callback triggered after npc entity was killed.
+   *
+   * @param npc The npc entity that was killed.
+   */
+  postNPCDeath?(npc: EntityNPC): void;
+
+  /**
+   * Optional callback triggered after a entity was removed.
+   *
+   * @param pickup The pickup entity that was removed.
+   */
+  postEntityRemove?(entity: Entity): void;
 
   /**
    * Optional function called during initialization to register compatibility with **External Item

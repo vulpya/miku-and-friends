@@ -1,7 +1,12 @@
 import { initModFeatures, isRepentogon } from "isaacscript-common";
 import { version } from "../package.json";
-import { MikuCharacter } from "./characters/Miku/MikuCharacter";
-import { MikuTaintedCharacter } from "./characters/Miku/MikuTaintedCharacter";
+import { PlayerTypeCustom } from "./characters/enum";
+import { MIKU_STATS, MikuCharacter } from "./characters/Miku/MikuCharacter";
+import {
+  MIKU_B_STATS,
+  MikuTaintedCharacter,
+} from "./characters/Miku/MikuTaintedCharacter";
+import { NotePickup } from "./entities/pickups/NotePickup/NotePickup";
 import { GlitchNoteTear } from "./entities/tears/GlitchNoteTear/GlitchNoteTear";
 import { MusicalNoteTear } from "./entities/tears/MusicalNoteTear/MusicalNoteTear";
 import { MicrophoneItem } from "./items/Microphone/MicrophoneItem";
@@ -22,7 +27,13 @@ export const main = (): void => {
     ...ACTIVE_ITEMS,
     ...TEARS,
     ...CHARACTERS,
+    NotePickup,
   ]);
+
+  NotePickup.register();
+
+  mod.registerCharacterStats(PlayerTypeCustom.MIKU, MIKU_STATS);
+  mod.registerCharacterStats(PlayerTypeCustom.MIKU_B, MIKU_B_STATS);
 
   if (isRepentogon()) {
     print(`\n${MOD_NAME} v${version} loaded. [REPENTOGON]`);

@@ -4,7 +4,7 @@ import {
   ModCallback,
   PlayerVariant,
 } from "isaac-typescript-definitions";
-import { addTearsStat, Callback } from "isaacscript-common";
+import { Callback, ReadonlyMap } from "isaacscript-common";
 import type { EIDExtended } from "../../compat/EID";
 import { CollectibleTypeCustom } from "../../items/enum";
 import { Debugger } from "../../util/debug";
@@ -23,15 +23,18 @@ const MIKU_CONFIG = {
   name: "Miku",
   description: "Uses music to charm enemies. Some may even become fans!",
   birthrightDesc: "Chance to permanently charm enemies scales with Luck.",
-  moveSpeed: 0.15,
-  damage: -0.8,
-  tears: 0.5,
   pocketActive: CollectibleTypeCustom.MICROPHONE,
+  nullItem: CollectibleTypeCustom.MIKU_IDOL,
   costumes: {
     hair: Isaac.GetCostumeIdByPath("gfx/characters/Character_MikuHead.anm2"),
   },
-  nullItem: CollectibleTypeCustom.MIKU_IDOL,
 } as const;
+
+export const MIKU_STATS = new ReadonlyMap<CacheFlag, number>([
+  [CacheFlag.SPEED, 1.15],
+  [CacheFlag.DAMAGE, 2.7],
+  [CacheFlag.FIRE_DELAY, 3.2],
+]);
 
 export class MikuCharacter extends Character {
   v = data;
@@ -73,30 +76,6 @@ export class MikuCharacter extends Character {
       );
       Debugger.char(MIKU_CONFIG.name, "Give microphone pocket active item");
     }
-  }
-
-  @Callback(ModCallback.EVALUATE_CACHE, CacheFlag.SPEED)
-  override cacheMoveSpeed(player: EntityPlayer): void {
-    if (!isMiku(player)) {
-      return;
-    }
-    player.MoveSpeed += MIKU_CONFIG.moveSpeed;
-  }
-
-  @Callback(ModCallback.EVALUATE_CACHE, CacheFlag.FIRE_DELAY)
-  override cacheFireDelay(player: EntityPlayer): void {
-    if (!isMiku(player)) {
-      return;
-    }
-    addTearsStat(player, MIKU_CONFIG.tears);
-  }
-
-  @Callback(ModCallback.EVALUATE_CACHE, CacheFlag.DAMAGE)
-  override cacheDamage(player: EntityPlayer): void {
-    if (!isMiku(player)) {
-      return;
-    }
-    player.Damage += MIKU_CONFIG.damage;
   }
 
   /**

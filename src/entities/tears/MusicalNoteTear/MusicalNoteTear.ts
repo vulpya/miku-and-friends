@@ -13,10 +13,10 @@ import {
 import { isMiku } from "../../../characters/enum";
 import { Debugger } from "../../../util/debug";
 import { charmEnemy, isCharmableEnemy } from "../../../util/enemies";
-import { calcChance, rollFromChances, rollValue } from "../../../util/rng";
+import { calcChance, rollFromChances } from "../../../util/rng";
 import { TearVariantCustom } from "../enum";
-import { onTearKill } from "../helper";
-import { TearFeature } from "../TearFeature";
+import { spawnPoof } from "../helper";
+import { Tear } from "../Tear";
 
 interface MusicalNoteData {
   /** Charm chance of the `NoteTear` in percent. */
@@ -39,7 +39,7 @@ const data: MusicalNoteData = {
   charmDuration: 3 * 30,
 };
 
-export class MusicalNoteTear extends TearFeature {
+export class MusicalNoteTear extends Tear {
   v = data;
 
   /**
@@ -82,17 +82,17 @@ export class MusicalNoteTear extends TearFeature {
       isMiku(player) && player.HasCollectible(CollectibleType.BIRTHRIGHT);
 
     const result = rollFromChances(
-      rollValue(),
+      entity.GetDropRNG(),
       calcChance(this.v.fanChance, hasMikuBirthright ? player.Luck : 0),
       calcChance(this.v.charmChance, player.Luck),
     );
 
     if (result === 0) {
       charmEnemy(entity, 0, true);
-      Debugger.char(MUSICAL_NOTE_TEAR.name, "Enemy charmed permanently");
+      Debugger.tear(MUSICAL_NOTE_TEAR.name, "Enemy charmed permanently");
     } else if (result === 1) {
       charmEnemy(entity, this.v.charmDuration);
-      Debugger.char(
+      Debugger.tear(
         MUSICAL_NOTE_TEAR.name,
         `Enemy charmed for ${this.v.charmDuration / 30}s`,
       );
@@ -106,6 +106,6 @@ export class MusicalNoteTear extends TearFeature {
     TearVariantCustom.MUSICAL_NOTE,
   )
   override postTearKill(tear: EntityTear): void {
-    onTearKill(tear, EffectVariant.TEAR_POOF_A);
+    spawnPoof(tear, EffectVariant.TEAR_POOF_A);
   }
 }
