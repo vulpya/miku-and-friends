@@ -30,7 +30,7 @@ export class GlitchNoteTear extends Tear {
       return;
     }
 
-    const tearData: GlitchNoteTearData = getData(tear);
+    const tearData = getData<GlitchNoteTearData>(tear);
     const rng = tear.GetDropRNG();
 
     setTearColor(tear, tearData, rng);

@@ -11,6 +11,7 @@ import {
   VectorZero,
 } from "isaacscript-common";
 import { isMiku } from "../../../characters/enum";
+
 import type { TaintedMikuData } from "../../../characters/Miku/MikuTaintedCharacter";
 import { mod } from "../../../mod";
 import { getData } from "../../../util/data";
@@ -18,7 +19,7 @@ import { rollChance } from "../../../util/rng";
 import { PickupVariantCustom } from "../enum";
 import { Pickup } from "../Pickup";
 import type { NotePickupSubType } from "./NotePickupSubType";
-import { NOTE_TYPE_CONFIGS } from "./NotePickupSubType";
+import { NOTE_TYPE_DATA } from "./NotePickupSubType";
 
 /**
  * Configuration for a specific NotePickup subtype.
@@ -76,7 +77,7 @@ export interface NoteInstance {
  */
 const applyNotePickupVisuals = (pickup: EntityPickup, rng: RNG): void => {
   const subType = pickup.SubType as NotePickupSubType;
-  const config = NOTE_TYPE_CONFIGS[subType];
+  const config = NOTE_TYPE_DATA[subType];
 
   pickup.SetColor(config.color, -1, 0);
 
@@ -132,20 +133,23 @@ export class NotePickup extends Pickup {
    * - Adds entries to EID if available for in-game descriptions.
    */
   static register(): void {
-    for (const [subTypeKey, noteConfig] of Object.entries(NOTE_TYPE_CONFIGS)) {
+    for (const [subTypeKey, noteConfig] of Object.entries(NOTE_TYPE_DATA)) {
       const subType = Number(subTypeKey) as NotePickupSubType;
 
       mod.registerCustomPickup(
         PickupVariantCustom.NOTE,
         subType,
         (pickup, player) => {
-          const mikuData: TaintedMikuData = getData(player);
-          mikuData.run ??= { notes: [] };
-          mikuData.run.notes?.push({
+          const mikuData = getData<TaintedMikuData>(player);
+
+          mikuData.persistent ??= { notes: [], erased: [] };
+
+          mikuData.persistent.notes?.push({
             subType: pickup.SubType as NotePickupSubType,
             remainingUses:
-              NOTE_TYPE_CONFIGS[pickup.SubType as NotePickupSubType].uses,
+              NOTE_TYPE_DATA[pickup.SubType as NotePickupSubType].uses,
           });
+
           SFXManager().Play(SoundEffect.KEY_PICKUP_GAUNTLET);
         },
         (_, player) => (isMiku(player, true) ? undefined : true),

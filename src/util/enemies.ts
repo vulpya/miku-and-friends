@@ -6,7 +6,7 @@ import {
   spawnEffect,
   VectorZero,
 } from "isaacscript-common";
-import { Debugger } from "./debug";
+import { getFrames } from "./frames";
 
 /**
  * Checks if an entity is eligible for the **Charm** effect.
@@ -18,12 +18,6 @@ import { Debugger } from "./debug";
  *
  * @param entity The entity to check.
  * @returns `true` if the entity can be charmed, otherwise `false`.
- * @example
- * ```ts
- * if (isCharmableEnemy(entity)) {
- *   charmEnemy(entity, 90);
- * }
- * ```
  */
 export const isCharmableEnemy = (entity: Entity): boolean =>
   isActiveEnemy(entity) && entity.IsVulnerableEnemy() && !entity.IsBoss();
@@ -33,16 +27,15 @@ export const isCharmableEnemy = (entity: Entity): boolean =>
  *
  * - If the enemy is already charmed, calling this will refresh the duration unless `permanent` is
  *   `true`.
- * - Uses `EntityRef(entity)` internally for compatibility and networking.
+ * - Bosses cannot be charmed.
  *
- * @param entity The target enemy or boss to charm.
+ * @param entity The target enemy to charm.
  * @param seconds Duration of the charm effect in seconds. Ignored if `permanent` is `true`.
- * @param permanent If `true`, applies charm indefinitely (except for bosses, which still use
- *                  `frames`).
+ * @param permanent If `true`, applies charm indefinitely.
  * @returns Always returns `true` after applying the effect.
  * @example
  * ```ts
- * charmEnemy(enemyEntity, 150); // Charm for 5 seconds
+ * charmEnemy(enemyEntity, 5); // Charm for 5 seconds
  * ```
  */
 export const charmEnemy = (
@@ -52,7 +45,7 @@ export const charmEnemy = (
 ): boolean => {
   entity.AddCharmed(
     EntityRef(entity),
-    permanent && !entity.IsBoss() ? -1 : seconds * 30,
+    permanent && !entity.IsBoss() ? -1 : getFrames(seconds),
   );
   return true;
 };
@@ -66,12 +59,6 @@ export const charmEnemy = (
  *
  * @param entity The entity to check.
  * @returns `true` if the entity can be frozen, otherwise `false`.
- * @example
- * ```ts
- * if (isFreezableEnemy(entity)) {
- *   freezeEnemy(entity, 90);
- * }
- * ```
  */
 export const isFreezableEnemy = (entity: Entity): boolean =>
   isActiveEnemy(entity) && entity.IsVulnerableEnemy();
@@ -81,7 +68,7 @@ export const isFreezableEnemy = (entity: Entity): boolean =>
  *
  * - If the enemy is already frozen, calling this will refresh the duration unless `permanent` is
  *   `true`.
- * - Uses `EntityRef(entity)` internally for compatibility and networking.
+ * - Bosses cannot receive permanent freeze; their duration is always frame-based.
  *
  * @param entity The target enemy or boss to freeze.
  * @param seconds Duration of the freeze effect in seconds. Ignored if `permanent` is `true`.
@@ -90,7 +77,7 @@ export const isFreezableEnemy = (entity: Entity): boolean =>
  * @returns Always returns `true` after applying the effect.
  * @example
  * ```ts
- * freezeEnemy(enemyEntity, 90); // Freeze for 3 seconds
+ * freezeEnemy(enemyEntity, 3); // Freeze for 3 seconds
  * ```
  */
 export const freezeEnemy = (
@@ -100,7 +87,52 @@ export const freezeEnemy = (
 ): boolean => {
   entity.AddFreeze(
     EntityRef(entity),
-    permanent && !entity.IsBoss() ? -1 : seconds * 30,
+    permanent && !entity.IsBoss() ? -1 : getFrames(seconds),
+  );
+  return true;
+};
+
+/**
+ * Checks if an entity is eligible for the **Burn** effect.
+ *
+ * An entity is burnable if it is:
+ * - Active and alive.
+ * - Vulnerable (can take damage and respond to status effects).
+ *
+ * @param entity The entity to check.
+ * @returns `true` if the entity can be burned, otherwise `false`.
+ */
+export const isBurnableEnemy = (entity: Entity): boolean =>
+  isActiveEnemy(entity) && entity.IsVulnerableEnemy();
+
+/**
+ * Applies the **Burn** effect to an enemy entity.
+ *
+ * - If the enemy is already burning, calling this will refresh the duration unless `permanent` is
+ *   `true`.
+ * - Bosses cannot receive permanent burn; their duration is always frame-based.
+ *
+ * @param entity The target enemy or boss to burn.
+ * @param damage Damage dealt per tick while burning.
+ * @param seconds Duration of the burn effect in seconds. Ignored if `permanent` is `true` (except
+ *                for bosses).
+ * @param permanent If `true`, applies burn indefinitely (non-boss enemies only).
+ * @returns Always returns `true` after applying the effect.
+ * @example
+ * ```ts
+ * burnEnemy(enemyEntity, 3.5, 4); // Burn for 4 seconds dealing 3.5 damage per tick
+ * ```
+ */
+export const burnEnemy = (
+  entity: Entity,
+  damage: float,
+  seconds: number,
+  permanent = false,
+): boolean => {
+  entity.AddBurn(
+    EntityRef(entity),
+    permanent && !entity.IsBoss() ? -1 : getFrames(seconds),
+    damage,
   );
   return true;
 };
@@ -136,22 +168,21 @@ export const eraseEnemies = (
   type: EntityType,
   variant: Entity["Variant"],
 ): number => {
-  const npcs = getEntities(-1, -1, -1, true).filter(
+  const entities = getEntities(-1, -1, -1, true).filter(
     (e) => isActiveEnemy(e) && e.Type === type && e.Variant === variant,
   );
 
-  for (const npc of npcs) {
-    npc.Remove();
+  for (const entity of entities) {
+    entity.Remove();
     const puff = spawnEffect(
       EffectVariant.POOF_1,
       0,
-      npc.Position,
+      entity.Position,
       VectorZero,
-      npc,
+      entity,
     );
+    // Eraser color.
     puff.SetColor(Color(1, 0.4, 0.6, 1, 0, 0, 0), -1, 0);
   }
-
-  Debugger.char("Eraser", `Erased ${npcs.length} enemies.`);
-  return npcs.length;
+  return entities.length;
 };

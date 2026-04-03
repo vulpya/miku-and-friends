@@ -20,10 +20,10 @@ import { Tear } from "../Tear";
 
 interface MusicalNoteData {
   /** Charm chance of the `NoteTear` in percent. */
-  charmChance: number;
+  charmChance: float;
   /** Chance to charm an enemy permanently in percent. */
-  fanChance: number;
-  /** Duration of the charm effect in frames. */
+  fanChance: float;
+  /** Duration of the charm effect in seconds. */
   charmDuration: number;
 }
 
@@ -36,7 +36,7 @@ const MUSICAL_NOTE_TEAR = {
 const data: MusicalNoteData = {
   charmChance: 10,
   fanChance: 3,
-  charmDuration: 3 * 30,
+  charmDuration: 3,
 };
 
 export class MusicalNoteTear extends Tear {

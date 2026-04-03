@@ -1,15 +1,18 @@
 import {
   ActiveSlot,
   CacheFlag,
-  ModCallback,
   PlayerVariant,
 } from "isaac-typescript-definitions";
-import { Callback, ReadonlyMap } from "isaacscript-common";
+import {
+  CallbackCustom,
+  ModCallbackCustom,
+  ReadonlyMap,
+} from "isaacscript-common";
 import type { EIDExtended } from "../../compat/EID";
 import { CollectibleTypeCustom } from "../../items/enum";
 import { Debugger } from "../../util/debug";
 import { Character } from "../Character";
-import { isMiku, PlayerTypeCustom } from "../enum";
+import { PlayerTypeCustom } from "../enum";
 
 interface MikuPlayerData {
   hasIdol?: boolean;
@@ -47,12 +50,12 @@ export class MikuCharacter extends Character {
    * @param player The player entity being initialized.
    * @see {@link EntityPlayer} The entity player class.
    */
-  @Callback(ModCallback.POST_PLAYER_INIT, PlayerVariant.PLAYER)
-  override postPlayerInit(player: EntityPlayer): void {
-    if (!isMiku(player)) {
-      return;
-    }
-
+  @CallbackCustom(
+    ModCallbackCustom.POST_PLAYER_INIT_FIRST,
+    PlayerVariant.PLAYER,
+    PlayerTypeCustom.MIKU,
+  )
+  override postPlayerInitFirst(player: EntityPlayer): void {
     player.AddNullCostume(MIKU_CONFIG.costumes.hair);
     Debugger.char(
       MIKU_CONFIG.name,

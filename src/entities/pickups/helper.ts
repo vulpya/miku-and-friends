@@ -4,9 +4,9 @@ import {
 } from "isaac-typescript-definitions";
 import { spawnPickup } from "isaacscript-common";
 import { Debugger } from "../../util/debug";
-import { PickupVariantCustom } from "./enum";
 import type { NotePickupSubType } from "./NotePickup/NotePickupSubType";
-import { NOTE_TYPE_CONFIGS } from "./NotePickup/NotePickupSubType";
+import { NOTE_TYPE_DATA } from "./NotePickup/NotePickupSubType";
+import { PickupVariantCustom } from "./enum";
 
 /**
  * Spawns a colored `NotePickup` at the specified position.
@@ -20,16 +20,17 @@ export const spawnNotePickup = (
   position: Vector,
 ): EntityPickup => {
   const pickup = spawnPickup(PickupVariantCustom.NOTE, subType, position);
+  const note = NOTE_TYPE_DATA[subType];
 
   const sprite = pickup.GetSprite();
-  sprite.Color = NOTE_TYPE_CONFIGS[subType].color;
+  sprite.Color = note.color;
 
   pickup.GridCollisionClass = EntityGridCollisionClass.GROUND;
   pickup.EntityCollisionClass = EntityCollisionClass.PLAYER_OBJECTS;
 
   Debugger.pickup(
-    "NotePickup",
-    `Spawned ${NOTE_TYPE_CONFIGS[subType].name} at (${position.X}, ${position.Y})`,
+    "Note",
+    `Spawned ${note.name} at (${position.X}, ${position.Y})`,
   );
 
   return pickup;

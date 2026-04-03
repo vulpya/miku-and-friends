@@ -14,10 +14,21 @@ export abstract class Feature extends ModFeature {
     }
   }
 
+  onGameExit?(): void;
+
+  onGameStart?(isContinued: boolean): void;
+
   /**
    * Optional callback triggered after a player entity is initialized.
    *
-   * Use this to set up character-specific starting stats, flags, or custom state.
+   * Use this to set up character-specific item, costumes, etc...
+   *
+   * @param player The player entity being initialized.
+   */
+  postPlayerInitFirst?(player: EntityPlayer): void;
+
+  /**
+   * Optional callback triggered after a player entity is initialized.
    *
    * @param player The player entity being initialized.
    */

@@ -4,7 +4,7 @@ import {
   ModCallback,
   PlayerVariant,
 } from "isaac-typescript-definitions";
-import type { PlayerIndex } from "isaacscript-common";
+import type { PlayerIndex, SaveData } from "isaacscript-common";
 import {
   Callback,
   CallbackCustom,
@@ -13,6 +13,8 @@ import {
   getPlayerIndex,
   getPlayersOfType,
   isActiveEnemy,
+  jsonDecode,
+  jsonEncode,
   ModCallbackCustom,
   ReadonlyMap,
 } from "isaacscript-common";
@@ -20,34 +22,37 @@ import type { EIDExtended } from "../../compat/EID";
 import { spawnNotePickup } from "../../entities/pickups/helper";
 import type { NoteInstance } from "../../entities/pickups/NotePickup/NotePickup";
 import {
-  NOTE_TYPE_CONFIGS,
+  NOTE_TYPE_DATA,
   NotePickupSubType,
 } from "../../entities/pickups/NotePickup/NotePickupSubType";
 import { TearVariantCustom } from "../../entities/tears/enum";
 import type { GlitchNoteTearData } from "../../entities/tears/GlitchNoteTear/GlitchNoteTear";
+import { mod } from "../../mod";
 import { setTearColor } from "../../util";
 import { getData } from "../../util/data";
 import { Debugger } from "../../util/debug";
 import { eraseEnemies, getEnemyKey } from "../../util/enemies";
 import { rollWeighted } from "../../util/rng";
+import { SAVE_DATA } from "../../util/save";
 import { Character } from "../Character";
 import { isMiku, PlayerTypeCustom } from "../enum";
 
 const npcLastHitPlayer = new Map<Seed, PlayerIndex>();
 
 export interface TaintedMikuData {
-  run?: {
+  persistent?: {
+    erased?: string[];
     notes?: NoteInstance[];
-    erased?: Set<string>;
   };
 }
 
-const data: TaintedMikuData = {
-  run: {
-    notes: [],
-    erased: new Set(),
-  },
-};
+export interface SerializedTaintedMikuData {
+  erased: string[];
+  notes: Array<{
+    subType: NotePickupSubType;
+    remainingUses: number;
+  }>;
+}
 
 const MIKU_TAINTED_CONFIG = {
   name: "Miku",
@@ -65,29 +70,93 @@ export const MIKU_B_STATS = new ReadonlyMap<CacheFlag, number>([
 ]);
 
 export class MikuTaintedCharacter extends Character {
-  v = data;
+  @CallbackCustom(ModCallbackCustom.POST_GAME_STARTED_REORDERED, true)
+  override onGameStart(isContinued: boolean): void {
+    if (!isContinued) {
+      return;
+    }
+
+    if (!mod.HasData()) {
+      return;
+    }
+
+    const loaded = jsonDecode(mod.LoadData()) as SaveData;
+
+    print(loaded.persistent);
+
+    Object.assign(SAVE_DATA, loaded);
+  }
+
+  @Callback(ModCallback.PRE_GAME_EXIT)
+  override onGameExit(): void {
+    SAVE_DATA.players = {};
+
+    const players = getPlayersOfType(PlayerTypeCustom.MIKU_B);
+
+    for (const player of players) {
+      const playerIndex = getPlayerIndex(player);
+      const playerData = getData<TaintedMikuData>(player);
+
+      if (!playerData.persistent) {
+        continue;
+      }
+
+      const { persistent } = playerData;
+
+      SAVE_DATA.players[playerIndex.toString()] = {
+        erased: persistent.erased ? [...persistent.erased] : [],
+
+        notes: persistent.notes ?? [],
+      };
+    }
+
+    mod.SaveData(jsonEncode(SAVE_DATA));
+  }
 
   /**
-   * Called after Tainted Miku is initialized.
+   * Called after Tainted Miku is initialized the first time.
    *
-   * Adds Miku's hair costume.
+   * Adds Tainted Miku's hair costume.
    *
    * @param player The player entity being initialized.
-   * @see {@link EntityPlayer} The entity player class.
    */
   @CallbackCustom(
     ModCallbackCustom.POST_PLAYER_INIT_FIRST,
     PlayerVariant.PLAYER,
     PlayerTypeCustom.MIKU_B,
   )
-  override postPlayerInit(player: EntityPlayer): void {
-    this.v = getData(player);
-
+  override postPlayerInitFirst(player: EntityPlayer): void {
     player.AddNullCostume(MIKU_TAINTED_CONFIG.costumes.hair);
     Debugger.char(
       `${MIKU_TAINTED_CONFIG.name} (Tainted)`,
       `applied null costume: ${MIKU_TAINTED_CONFIG.costumes.hair}`,
     );
+  }
+
+  /**
+   * Called after Tainted Miku is initialized.
+   *
+   * Reads the mod save data to set the data for Miku on a continued run.
+   *
+   * @param player The player entity being initialized.
+   */
+  @Callback(ModCallback.POST_PLAYER_INIT, PlayerVariant.PLAYER)
+  override postPlayerInit(player: EntityPlayer): void {
+    if (!isMiku(player, true)) {
+      return;
+    }
+
+    const playerIndex = getPlayerIndex(player);
+    const saved = SAVE_DATA.players[playerIndex.toString()];
+    if (!saved) {
+      return;
+    }
+
+    const playerData = getData<TaintedMikuData>(player);
+    playerData.persistent = {
+      erased: saved.erased,
+      notes: saved.notes,
+    };
   }
 
   @Callback(ModCallback.POST_TEAR_INIT)
@@ -100,7 +169,7 @@ export class MikuTaintedCharacter extends Character {
 
     tear.ChangeVariant(TearVariantCustom.GLITCH_NOTE);
 
-    const tearData: GlitchNoteTearData = getData(tear);
+    const tearData = getData<GlitchNoteTearData>(tear);
     const rng = tear.GetDropRNG();
 
     setTearColor(tear, tearData, rng);
@@ -113,7 +182,9 @@ export class MikuTaintedCharacter extends Character {
       return;
     }
 
-    const notes = this.v.run?.notes;
+    const playerData = getData<TaintedMikuData>(player);
+    const notes = playerData.persistent?.notes;
+
     if (!notes || notes.length === 0) {
       return;
     }
@@ -124,14 +195,12 @@ export class MikuTaintedCharacter extends Character {
     }
 
     const noteSubType = firstNote.subType;
-    const noteConfig = NOTE_TYPE_CONFIGS[noteSubType];
-    const tearData: GlitchNoteTearData = getData(tear);
+    const noteConfig = NOTE_TYPE_DATA[noteSubType];
+    const tearData = getData<GlitchNoteTearData>(tear);
 
     tearData.color = noteConfig.color;
-
     noteConfig.applyEffect(player, tear);
 
-    // Decrease remaining uses
     firstNote.remainingUses--;
     if (firstNote.remainingUses <= 0) {
       notes.shift();
@@ -145,19 +214,20 @@ export class MikuTaintedCharacter extends Character {
       return;
     }
 
-    // FIXME: Don't use non-null-assertion
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const mikuData: TaintedMikuData = getData(players[0]!);
-    if (!mikuData.run?.erased) {
-      return;
-    }
+    for (const player of players) {
+      const mikuData = getData<TaintedMikuData>(player);
+      if (!mikuData.persistent?.erased) {
+        return;
+      }
 
-    if (mikuData.run.erased.has(getEnemyKey(npc))) {
-      eraseEnemies(npc.Type, npc.Variant);
+      if (mikuData.persistent.erased.includes(getEnemyKey(npc))) {
+        const erased = eraseEnemies(npc.Type, npc.Variant);
+        Debugger.char(MIKU_TAINTED_CONFIG.name, `Erased ${erased} enemies.`);
+      }
     }
   }
 
-  /** Sprite of this `NotePickup`. */
+  /** Spritesheet with icons for HUD. */
   private noteSprite: Sprite | undefined = undefined;
 
   @Callback(ModCallback.POST_RENDER)
@@ -167,9 +237,14 @@ export class MikuTaintedCharacter extends Character {
       return;
     }
 
-    const notes = this.v.run?.notes;
-    if (!notes || notes.length === 0) {
-      return;
+    let notes: NoteInstance[] | undefined;
+    for (const player of players) {
+      const playerData = getData<TaintedMikuData>(player);
+      notes = playerData.persistent?.notes;
+
+      if (!notes || notes.length === 0) {
+        continue;
+      }
     }
 
     const startX = 45;
@@ -184,6 +259,10 @@ export class MikuTaintedCharacter extends Character {
       this.noteSprite = Sprite();
       this.noteSprite.Load("gfx/pickups/note.anm2", true);
       this.noteSprite.Play("Idle", true);
+    }
+
+    if (!notes) {
+      return;
     }
 
     const [activeNote, ...restNotes] = notes.slice(-maxVisible);
@@ -203,7 +282,7 @@ export class MikuTaintedCharacter extends Character {
         y += Math.sin(Game().GetFrameCount() * 0.1 + i);
       }
 
-      const noteConfig = NOTE_TYPE_CONFIGS[note.subType];
+      const noteConfig = NOTE_TYPE_DATA[note.subType];
 
       this.noteSprite.Scale = Vector(baseSize / 16, baseSize / 16);
 
@@ -284,7 +363,7 @@ export class MikuTaintedCharacter extends Character {
 
     const note = rollWeighted(
       NOTE_SUBTYPES,
-      NOTE_SUBTYPES.map((s) => NOTE_TYPE_CONFIGS[s].weight),
+      NOTE_SUBTYPES.map((s) => NOTE_TYPE_DATA[s].weight),
       rng,
       MIKU_TAINTED_CONFIG.noteDropChance,
     );
@@ -292,7 +371,7 @@ export class MikuTaintedCharacter extends Character {
     Debugger.rng(
       "NoteDrop",
       `Rolled note for NPC ${npc.Type}_${npc.Variant}: ${
-        note === undefined ? "None" : NOTE_TYPE_CONFIGS[note].name
+        note === undefined ? "None" : NOTE_TYPE_DATA[note].name
       }`,
     );
 

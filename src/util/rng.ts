@@ -27,7 +27,7 @@ const luckBonus = (luck: number) => luck * 2;
  * }
  * ```
  */
-export const rollPercent = (rng: RNG): number => getRandomFloat(0, 100, rng);
+const getRandomPercent = (rng: RNG): number => getRandomFloat(0, 100, rng);
 
 /**
  * Computes the final probability chance after applying a Luck modifier.
@@ -118,7 +118,7 @@ export const rollFromChances = (
 ): number => {
   let cumulative = 0;
 
-  const roll = rollPercent(rng);
+  const roll = getRandomPercent(rng);
   for (const [i, chance] of chances.entries()) {
     cumulative += chance;
     if (roll < cumulative) {
@@ -159,10 +159,7 @@ export const rollChance = (
   rng: RNG,
   luck = 0,
   debug = false,
-): boolean => {
-  const chance = calcChance(percent, luck, true, debug);
-  return rollPercent(rng) < chance;
-};
+): boolean => getRandomPercent(rng) < calcChance(percent, luck, true, debug);
 
 /**
  * Rolls an item from a weighted list using a deterministic RNG system.
@@ -186,7 +183,7 @@ export const rollChance = (
  * ```ts
  * const items = ["Red", "Blue", "Green"];
  * const weights = [5, 10, 1];
- * const selected = rollWeightedWithChance(items, weights, rng, player.Luck, 50);
+ * const selected = rollWeightedWithChance(items, weights, rng, 50, player.Luck);
  * ```
  */
 export const rollWeighted = <T>(
@@ -196,30 +193,35 @@ export const rollWeighted = <T>(
   chance = 100,
   luck = 0,
 ): T | undefined => {
-  // Roll against the global chance to determine if an item can drop.
+  // Global chance roll
   if (!rollChance(chance, rng, luck, true)) {
     Debugger.rng("rollWeighted", "Global chance failed");
     return undefined;
   }
 
-  // Calculate total weight of all items.
-  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+  if (items.length === 0 || weights.length !== items.length) {
+    Debugger.rng("rollWeighted", "Invalid items or weights");
+    return undefined;
+  }
+
+  const maxWeight = Math.max(...weights);
+  const adjustedWeights = weights.map((w) => Math.max(maxWeight - w + 1, 0));
+
+  const totalWeight = adjustedWeights.reduce((sum, w) => sum + w, 0);
   if (totalWeight <= 0) {
     Debugger.rng("rollWeighted", "Total weight is zero or negative");
     return undefined;
   }
 
-  // Roll a random value between 0 and totalWeight.
-  const roll = rng.RandomFloat() * totalWeight;
+  const roll = getRandomFloat(0, totalWeight, rng);
   Debugger.rng(
     "rollWeighted",
     `TotalWeight: ${totalWeight.toFixed(2)}, Roll: ${roll.toFixed(2)}, Items: ${items.length}`,
   );
 
-  // Iterate through items and select the one where the roll falls in its cumulative weight range.
   let cumulative = 0;
   for (const [i, item] of items.entries()) {
-    cumulative += weights[i] ?? 0;
+    cumulative += adjustedWeights[i] ?? 0;
 
     if (roll < cumulative) {
       Debugger.rng("rollWeighted", `Selected index: ${i}`);
@@ -227,7 +229,6 @@ export const rollWeighted = <T>(
     }
   }
 
-  // Fallback: return undefined if no item was selected
   Debugger.rng("rollWeighted", "No item selected from weights");
   return undefined;
 };
