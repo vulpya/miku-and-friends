@@ -1,5 +1,6 @@
 export const CollectibleTypeCustom = {
   VIRTUAL_IDOL: Isaac.GetItemIdByName("Virtual Idol"),
+  ENCORE: Isaac.GetItemIdByName("Encore"),
   MICROPHONE: Isaac.GetItemIdByName("Microphone"),
 
   // NULL items

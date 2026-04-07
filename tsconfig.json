@@ -11,6 +11,10 @@
     "isaacscript-tsconfig/tsconfig.mod.json",
   ],
 
+  "compilerOptions": {
+    "ignoreDeprecations": "5.0",
+  },
+
   // TypeScriptToLua settings
   "tstl": {
     "luaTarget": "5.3",

@@ -141,6 +141,12 @@ export abstract class Feature extends ModFeature {
    */
   postEntityRemove?(entity: Entity): void;
 
+  /** Optional callback triggered when a new room is entered. */
+  onNewRoom?(): void;
+
+  /** Optional callback triggered every frame (update tick). */
+  postUpdate?(): void;
+
   /**
    * Optional function called during initialization to register compatibility with **External Item
    * Descriptions (EID)**.

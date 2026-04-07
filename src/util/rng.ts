@@ -54,7 +54,7 @@ const getRandomPercent = (rng: RNG): number => getRandomFloat(0, 100, rng);
  * ```
  * @example
  * ```ts
- * // 25% base chance, negative luck will default to 0
+ * // 25% base chance, negative luck
  * calcChance(25, -5, true); // base chance(17.5%)
  * ```
  */
@@ -62,18 +62,15 @@ export const calcChance = (
   percent: number,
   luck = 0,
   allowNegative = false,
-  debug = false,
 ): number => {
   const bonus = luckBonus(allowNegative ? luck : Math.max(luck, 0));
   const finalChance = percent + bonus;
   const clampedChance = Math.max(0, Math.min(finalChance, 100));
 
-  if (debug) {
-    Debugger.rng(
-      "calcChance",
-      `Base percent: ${percent.toFixed(2)}%, Luck: ${luck.toFixed(2)}, Luck Bonus: ${bonus.toFixed(2)}, Chance: ${clampedChance.toFixed(2)}%`,
-    );
-  }
+  Debugger.rng(
+    "calcChance",
+    `Base percent: ${percent.toFixed(2)}%, Luck: ${luck.toFixed(2)}, Luck Bonus: ${bonus.toFixed(2)}, Chance: ${clampedChance.toFixed(2)}%`,
+  );
 
   return clampedChance;
 };
@@ -138,7 +135,6 @@ export const rollFromChances = (
  * @param percent Base success chance (0–100).
  * @param rng RNG instance (e.g. from `npc.GetDropRNG()`).
  * @param luck Optional luck modifier.
- * @param debug `true` if chance calculations should print debug lines.
  * @returns `true` if the roll succeeds.
  * @example
  * ```ts
@@ -154,47 +150,44 @@ export const rollFromChances = (
  * }
  * ```
  */
-export const rollChance = (
-  percent: number,
-  rng: RNG,
-  luck = 0,
-  debug = false,
-): boolean => getRandomPercent(rng) < calcChance(percent, luck, true, debug);
+export const rollChance = (percent: number, rng: RNG, luck = 0): boolean =>
+  getRandomPercent(rng) < calcChance(percent, luck, true);
 
 /**
  * Rolls an item from a weighted list using a deterministic RNG system.
  *
- * This function first checks a global drop chance (optionally modified by luck). If the global roll
- * succeeds, it selects one item based on the relative weights provided. Items with higher weights
- * are more likely to be chosen.
+ * Works with:
+ * - Fractional weights (0 < w < 1) are proportionally less likely.
+ * - Negative weights are extremely rare but possible.
+ * - Large weights scale proportionally.
+ * - Optional global drop chance and luck.
  *
- * ### Notes
- * - Weights do **not** get affected by luck; they determine the relative probabilities among items.
- * - If all weights are 0 or negative, the function returns `undefined`.
- *
- * @template T The type of item to be selected.
+ * @template T The type of item to select.
  * @param items Array of items to select from.
  * @param weights Array of numeric weights corresponding to each item.
  * @param rng RNG instance to use for deterministic rolling.
- * @param chance Optional global chance (0–100%) to allow an item to drop. Defaults to 100.
- * @param luck Optional luck stat that **only modifies the global drop chance**, not item weights.
- * @returns Selected item or `undefined` if global roll fails or no weighted item is selectable.
- * @example
- * ```ts
- * const items = ["Red", "Blue", "Green"];
- * const weights = [5, 10, 1];
- * const selected = rollWeightedWithChance(items, weights, rng, 50, player.Luck);
- * ```
+ * @param chance Chance (0–100%) to allow an roll a weighted item. Defaults to 100.
+ * @param luck Optional luck stat that modifies the global drop chance. Defaults to 0.
+ * @returns Selected item or `undefined` if global roll fails or no weighted item is selectable. *
+ *
+ * ### Remarks
+ * - **Testing rare weights**: Set the weight of an item to a very low value (e.g., 0.0001) and run
+ *   multiple iterations (1000+) to verify it appears extremely rarely.
+ * - **Verify RNG determinism**: Use the same RNG seed and rerun the roll; the selected item should
+ *   always be the same, perfect for debugging.
+ * - **Visual debugging**: Enable `debug = true` in `rollChance` if using it for global chance. The
+ *   `Debugger.rng` logs show the roll, total weight, and chosen index.
+ * - **Scaling weights**: For extremely large numbers, the ratio between items is what matters, not
+ *   the absolute value. You can safely use 1, 10, 100, etc.
  */
 export const rollWeighted = <T>(
   items: readonly T[],
   weights: readonly number[],
   rng: RNG,
-  chance = 100,
+  chance: number,
   luck = 0,
 ): T | undefined => {
-  // Global chance roll
-  if (!rollChance(chance, rng, luck, true)) {
+  if (!rollChance(chance, rng, luck)) {
     Debugger.rng("rollWeighted", "Global chance failed");
     return undefined;
   }
@@ -204,25 +197,15 @@ export const rollWeighted = <T>(
     return undefined;
   }
 
-  const maxWeight = Math.max(...weights);
-  const adjustedWeights = weights.map((w) => Math.max(maxWeight - w + 1, 0));
-
-  const totalWeight = adjustedWeights.reduce((sum, w) => sum + w, 0);
-  if (totalWeight <= 0) {
-    Debugger.rng("rollWeighted", "Total weight is zero or negative");
-    return undefined;
-  }
+  const safeWeights = weights.map((w) => (w <= 0 ? 0.0001 : w));
+  const totalWeight = safeWeights.reduce((sum, w) => sum + w, 0);
 
   const roll = getRandomFloat(0, totalWeight, rng);
-  Debugger.rng(
-    "rollWeighted",
-    `TotalWeight: ${totalWeight.toFixed(2)}, Roll: ${roll.toFixed(2)}, Items: ${items.length}`,
-  );
+  Debugger.rng("rollWeighted", `TotalWeight: ${totalWeight}, Roll: ${roll}`);
 
   let cumulative = 0;
   for (const [i, item] of items.entries()) {
-    cumulative += adjustedWeights[i] ?? 0;
-
+    cumulative += safeWeights[i] ?? 0;
     if (roll < cumulative) {
       Debugger.rng("rollWeighted", `Selected index: ${i}`);
       return item;

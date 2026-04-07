@@ -77,7 +77,7 @@ export const NOTE_TYPE_DATA: Record<NotePickupSubType, NoteTypeConfig> = {
     name: "Blue Note",
     description: "no idea yet ;_;",
     color: Color(0.2, 0.3, 0.7, 1, 0, 0, 0),
-    weight: 1,
+    weight: 5,
     uses: 3,
     applyEffect: (_player, tear) => {
       tear.AddTearFlags(TearFlag.CREEP_TRAIL);
@@ -97,7 +97,7 @@ export const NOTE_TYPE_DATA: Record<NotePickupSubType, NoteTypeConfig> = {
     name: "Scary Note",
     description: "Slows and fears enemies",
     color: Color(0.7, 0.6, 0.2, 1, 0, 0, 0),
-    weight: 1,
+    weight: 2,
     uses: 4,
     applyEffect: (_player, tear) => {
       tear.AddTearFlags(TearFlag.SLOW);
@@ -107,7 +107,7 @@ export const NOTE_TYPE_DATA: Record<NotePickupSubType, NoteTypeConfig> = {
     name: "Magic Note",
     description: "Homing tears that track enemies",
     color: Color(0.5, 0.2, 0.7, 1, 0, 0, 0),
-    weight: 1,
+    weight: 2,
     uses: 3,
     applyEffect: (_player, tear) => {
       tear.AddTearFlags(TearFlag.HOMING);
@@ -117,11 +117,9 @@ export const NOTE_TYPE_DATA: Record<NotePickupSubType, NoteTypeConfig> = {
     name: "Rubber Note",
     description: "Permanently erases enemies from the run",
     color: Color(1, 0.4, 0.6, 1, 0, 0, 0),
-    weight: 0.666,
+    weight: 0.5,
     uses: 1,
     applyEffect: (player: EntityPlayer, tear: EntityTear) => {
-      tear.AddTearFlags(TearFlag.BOUNCE);
-
       const tearData = getData<GlitchNoteTearData>(tear);
       tearData.onHitEnemy = (enemy: EntityNPC) => {
         if (!isActiveEnemy(enemy)) {

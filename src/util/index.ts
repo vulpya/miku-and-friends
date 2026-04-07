@@ -35,7 +35,7 @@ export const setTearColor = (
  * @param rng A random number generator instance used to determine the jitter amount.
  */
 export const applyPositionJitter = (tear: EntityTear, rng: RNG): void => {
-  if (rollChance(15, rng, 0, false)) {
+  if (rollChance(15, rng, 0)) {
     const jitterX = (getRandomFloat(0, 1, rng) - 0.5) * 0.3;
     const jitterY = (getRandomFloat(0, 1, rng) - 0.5) * 0.3;
     tear.Position = tear.Position.add(Vector(jitterX, jitterY));
@@ -52,7 +52,7 @@ export const applyPositionJitter = (tear: EntityTear, rng: RNG): void => {
  * @param rng A random number generator instance used to determine the rotation shift amount.
  */
 export const applyRotationShift = (tear: EntityTear, rng: RNG): void => {
-  if (rollChance(20, rng, 0, false)) {
+  if (rollChance(20, rng, 0)) {
     const rotationShift = (getRandomFloat(0, 1, rng) - 0.5) * 4;
     tear.SpriteRotation += rotationShift;
   }

@@ -168,21 +168,21 @@ export const eraseEnemies = (
   type: EntityType,
   variant: Entity["Variant"],
 ): number => {
-  const entities = getEntities(-1, -1, -1, true).filter(
-    (e) => isActiveEnemy(e) && e.Type === type && e.Variant === variant,
+  const enemies = getEntities(type, variant, -1, true).filter((e) =>
+    isActiveEnemy(e),
   );
 
-  for (const entity of entities) {
-    entity.Remove();
+  for (const enemy of enemies) {
+    enemy.Remove();
     const puff = spawnEffect(
       EffectVariant.POOF_1,
       0,
-      entity.Position,
+      enemy.Position,
       VectorZero,
-      entity,
+      enemy,
     );
     // Eraser color.
     puff.SetColor(Color(1, 0.4, 0.6, 1, 0, 0, 0), -1, 0);
   }
-  return entities.length;
+  return enemies.length;
 };

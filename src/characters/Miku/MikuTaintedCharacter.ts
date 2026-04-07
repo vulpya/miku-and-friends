@@ -1,8 +1,10 @@
 import type { DamageFlag } from "isaac-typescript-definitions";
 import {
+  ButtonAction,
   CacheFlag,
   ModCallback,
   PlayerVariant,
+  SoundEffect,
 } from "isaac-typescript-definitions";
 import type { PlayerIndex, SaveData } from "isaacscript-common";
 import {
@@ -27,6 +29,7 @@ import {
 } from "../../entities/pickups/NotePickup/NotePickupSubType";
 import { TearVariantCustom } from "../../entities/tears/enum";
 import type { GlitchNoteTearData } from "../../entities/tears/GlitchNoteTear/GlitchNoteTear";
+import { getWobbleOffset } from "../../entities/tears/helper";
 import { mod } from "../../mod";
 import { setTearColor } from "../../util";
 import { getData } from "../../util/data";
@@ -48,10 +51,7 @@ export interface TaintedMikuData {
 
 export interface SerializedTaintedMikuData {
   erased: string[];
-  notes: Array<{
-    subType: NotePickupSubType;
-    remainingUses: number;
-  }>;
+  notes: NoteInstance[];
 }
 
 const MIKU_TAINTED_CONFIG = {
@@ -61,22 +61,18 @@ const MIKU_TAINTED_CONFIG = {
   costumes: {
     hair: Isaac.GetCostumeIdByPath("gfx/characters/Character_MikuHead.anm2"),
   },
-  noteDropChance: 50,
+  noteDropChance: 100,
 } as const;
 
 export const MIKU_B_STATS = new ReadonlyMap<CacheFlag, number>([
   [CacheFlag.DAMAGE, 3.2],
-  [CacheFlag.FIRE_DELAY, 2],
+  [CacheFlag.FIRE_DELAY, 3],
 ]);
 
 export class MikuTaintedCharacter extends Character {
   @CallbackCustom(ModCallbackCustom.POST_GAME_STARTED_REORDERED, true)
   override onGameStart(isContinued: boolean): void {
-    if (!isContinued) {
-      return;
-    }
-
-    if (!mod.HasData()) {
+    if (!isContinued || !mod.HasData()) {
       return;
     }
 
@@ -101,12 +97,12 @@ export class MikuTaintedCharacter extends Character {
         continue;
       }
 
-      const { persistent } = playerData;
+      const { erased, notes } = playerData.persistent;
 
       SAVE_DATA.players[playerIndex.toString()] = {
-        erased: persistent.erased ? [...persistent.erased] : [],
+        erased: erased ? [...erased] : [],
 
-        notes: persistent.notes ?? [],
+        notes: notes ?? [],
       };
     }
 
@@ -136,7 +132,7 @@ export class MikuTaintedCharacter extends Character {
   /**
    * Called after Tainted Miku is initialized.
    *
-   * Reads the mod save data to set the data for Miku on a continued run.
+   * Reads the mod save data to set the data for Tainted Miku on a continued run.
    *
    * @param player The player entity being initialized.
    */
@@ -157,6 +153,28 @@ export class MikuTaintedCharacter extends Character {
       erased: saved.erased,
       notes: saved.notes,
     };
+  }
+
+  @CallbackCustom(
+    ModCallbackCustom.POST_PLAYER_UPDATE_REORDERED,
+    PlayerVariant.PLAYER,
+    PlayerTypeCustom.MIKU_B,
+  )
+  override postPlayerUpdate(player: EntityPlayer): void {
+    const playerData = getData<TaintedMikuData>(player);
+    const notes = playerData.persistent?.notes;
+    if (!notes || notes.length <= 1) {
+      return;
+    }
+
+    if (Input.IsActionTriggered(ButtonAction.DROP, player.ControllerIndex)) {
+      const firstNote = notes.shift();
+      if (firstNote) {
+        notes.push(firstNote);
+      }
+
+      SFXManager().Play(SoundEffect.COIN_SLOT);
+    }
   }
 
   @Callback(ModCallback.POST_TEAR_INIT)
@@ -184,25 +202,23 @@ export class MikuTaintedCharacter extends Character {
 
     const playerData = getData<TaintedMikuData>(player);
     const notes = playerData.persistent?.notes;
-
     if (!notes || notes.length === 0) {
       return;
     }
 
-    const firstNote = notes[0];
-    if (!firstNote) {
+    const note = notes[0];
+    if (!note) {
       return;
     }
 
-    const noteSubType = firstNote.subType;
-    const noteConfig = NOTE_TYPE_DATA[noteSubType];
+    const noteConfig = NOTE_TYPE_DATA[note.subType];
     const tearData = getData<GlitchNoteTearData>(tear);
 
     tearData.color = noteConfig.color;
     noteConfig.applyEffect(player, tear);
 
-    firstNote.remainingUses--;
-    if (firstNote.remainingUses <= 0) {
+    note.remainingUses--;
+    if (note.remainingUses <= 0) {
       notes.shift();
     }
   }
@@ -229,6 +245,8 @@ export class MikuTaintedCharacter extends Character {
 
   /** Spritesheet with icons for HUD. */
   private noteSprite: Sprite | undefined = undefined;
+  /** Spritesheet with icons for selected note display. */
+  private activeNoteSprite: Sprite | undefined = undefined;
 
   @Callback(ModCallback.POST_RENDER)
   render(): void {
@@ -237,72 +255,97 @@ export class MikuTaintedCharacter extends Character {
       return;
     }
 
-    let notes: NoteInstance[] | undefined;
     for (const player of players) {
       const playerData = getData<TaintedMikuData>(player);
-      notes = playerData.persistent?.notes;
+      const notes = playerData.persistent?.notes;
 
       if (!notes || notes.length === 0) {
         continue;
       }
-    }
 
-    const startX = 45;
-    const startY = 45;
-    const spacing = 16;
-    const baseSize = 14;
-    const maxPerRow = 5;
-    const maxRows = 2;
-    const maxVisible = maxPerRow * maxRows;
+      // HUD layout config.
+      const startX = 45; // Top-left X of the HUD note grid
+      const startY = 45; // Top-left Y of the HUD note grid
+      const spacing = 16; // Distance between notes
+      const baseSize = 14; // Base size for note sprites
+      const maxPerRow = 5; // Max notes per row
+      const maxRows = 2; // Max rows
+      const maxVisible = maxPerRow * maxRows; // Maximum notes to display in HUD
 
-    if (!this.noteSprite) {
-      this.noteSprite = Sprite();
-      this.noteSprite.Load("gfx/pickups/note.anm2", true);
-      this.noteSprite.Play("Idle", true);
-    }
-
-    if (!notes) {
-      return;
-    }
-
-    const [activeNote, ...restNotes] = notes.slice(-maxVisible);
-    const notesToRender = [activeNote, ...restNotes];
-
-    for (const [i, note] of notesToRender.entries()) {
-      if (!note) {
-        continue;
+      // Load sprites if not loaded.
+      if (!this.noteSprite) {
+        this.noteSprite = Sprite();
+        this.noteSprite.Load("gfx/pickups/note.anm2", true);
+        this.noteSprite.Play("Idle", true); // Default animation
       }
 
-      const row = Math.floor(i / maxPerRow);
-      const col = i % maxPerRow;
-
-      const x = startX + col * spacing;
-      let y = startY + row * spacing;
-      if (i === 0) {
-        y += Math.sin(Game().GetFrameCount() * 0.1 + i);
+      if (!this.activeNoteSprite) {
+        this.activeNoteSprite = Sprite();
+        this.activeNoteSprite.Load("gfx/pickups/note.anm2", true);
+        this.activeNoteSprite.Play("Idle", true);
       }
 
-      const noteConfig = NOTE_TYPE_DATA[note.subType];
+      // Render Notes HUD.
+      const visibleNotes = notes.slice(0, maxVisible);
+      for (const [i, note] of visibleNotes.entries()) {
+        const row = Math.floor(i / maxPerRow);
+        const col = i % maxPerRow;
+        const x = startX + col * spacing;
+        const y = startY + row * spacing;
 
-      this.noteSprite.Scale = Vector(baseSize / 16, baseSize / 16);
+        const noteConfig = NOTE_TYPE_DATA[note.subType];
 
-      if (i === 0 && note.remainingUses < noteConfig.uses) {
-        const ratio = note.remainingUses / noteConfig.uses;
-        const dimmedColor = Color(
-          noteConfig.color.R * ratio,
-          noteConfig.color.G * ratio,
-          noteConfig.color.B * ratio,
-          noteConfig.color.A,
-          0,
-          0,
-          0,
-        );
-        this.noteSprite.Color = dimmedColor;
-      } else {
-        this.noteSprite.Color = noteConfig.color;
+        // Scale the active note slightly larger.
+        this.noteSprite.Scale =
+          i === 0
+            ? Vector((baseSize / 16) * 1.2, (baseSize / 16) * 1.2)
+            : Vector(baseSize / 16, baseSize / 16);
+
+        // Dim the note color if it has used up some of its uses.
+        this.noteSprite.Color =
+          note.remainingUses < noteConfig.uses
+            ? Color(
+                noteConfig.color.R * (note.remainingUses / noteConfig.uses),
+                noteConfig.color.G * (note.remainingUses / noteConfig.uses),
+                noteConfig.color.B * (note.remainingUses / noteConfig.uses),
+                noteConfig.color.A,
+                0,
+                0,
+                0,
+              )
+            : noteConfig.color;
+
+        this.noteSprite.Render(Vector(x, y));
       }
 
-      this.noteSprite.Render(Vector(x, y));
+      const activeNote = notes[0];
+      if (activeNote) {
+        const noteConfig = NOTE_TYPE_DATA[activeNote.subType];
+
+        const screenPos: Vector = Isaac.WorldToScreen(player.Position);
+
+        const floatX = screenPos.X;
+        const floatY = screenPos.Y - 50 + getWobbleOffset(0, 5, 0.05); // reduced wobble for subtlety
+
+        this.activeNoteSprite.Scale = Vector(1, 1); // normal size
+        this.activeNoteSprite.Color =
+          activeNote.remainingUses < noteConfig.uses
+            ? Color(
+                noteConfig.color.R
+                  * (activeNote.remainingUses / noteConfig.uses),
+                noteConfig.color.G
+                  * (activeNote.remainingUses / noteConfig.uses),
+                noteConfig.color.B
+                  * (activeNote.remainingUses / noteConfig.uses),
+                noteConfig.color.A,
+                0,
+                0,
+                0,
+              )
+            : noteConfig.color;
+
+        this.activeNoteSprite.Render(Vector(floatX, floatY));
+      }
     }
   }
 

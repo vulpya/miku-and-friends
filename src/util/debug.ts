@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 const DEBUG = {
-  RNG: true,
-  MATH: true,
-  CHARACTERS: true,
-  ITEMS: true,
-  TEAR: true,
-  PICKUP: true,
+  RNG: false,
+  MATH: false,
+  CHARACTERS: false,
+  ITEMS: false,
+  TEAR: false,
+  PICKUP: false,
 } as const;
 
 /** Debugging utility functions for the mod. */
@@ -49,7 +49,7 @@ export const Debugger = {
    * @param debugMath The detailed info of the rng calculation.
    */
   rng: (name: string, message: string, debugMath = false): void => {
-    if (!DEBUG.RNG || debugMath) {
+    if (!DEBUG.RNG && !debugMath) {
       return;
     }
     print(`[RNG\\${name}]: ${message}`);

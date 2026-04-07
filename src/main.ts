@@ -9,8 +9,8 @@ import {
 import { NotePickup } from "./entities/pickups/NotePickup/NotePickup";
 import { GlitchNoteTear } from "./entities/tears/GlitchNoteTear/GlitchNoteTear";
 import { MusicalNoteTear } from "./entities/tears/MusicalNoteTear/MusicalNoteTear";
-import { MicrophoneItem } from "./items/Microphone/MicrophoneItem";
-import { VirtualIdolItem } from "./items/VirtualIdol/VirtualIdolItem";
+import { MicrophoneItem } from "./items/MicrophoneItem/MicrophoneItem";
+import { VirtualIdolItem } from "./items/VirtualIdolItem/VirtualIdolItem";
 import { mod, MOD_NAME } from "./mod";
 
 const PASSIVE_ITEMS = [VirtualIdolItem] as const;
