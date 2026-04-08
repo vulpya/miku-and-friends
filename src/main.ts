@@ -9,7 +9,7 @@ import {
 import { NotePickup } from "./entities/pickups/NotePickup/NotePickup";
 import { GlitchNoteTear } from "./entities/tears/GlitchNoteTear/GlitchNoteTear";
 import { MusicalNoteTear } from "./entities/tears/MusicalNoteTear/MusicalNoteTear";
-import { EncoreItem } from "./items/EncoreItem/EncoreItemNew";
+import { EncoreItem } from "./items/EncoreItem/EncoreItem";
 import { MicrophoneItem } from "./items/MicrophoneItem/MicrophoneItem";
 import { VirtualIdolItem } from "./items/VirtualIdolItem/VirtualIdolItem";
 import { mod, MOD_NAME } from "./mod";
@@ -20,6 +20,8 @@ const ACTIVE_ITEMS = [MicrophoneItem] as const;
 
 const TEARS = [MusicalNoteTear, GlitchNoteTear] as const;
 
+const PICKUPS = [NotePickup] as const;
+
 const CHARACTERS = [MikuCharacter, MikuTaintedCharacter] as const;
 
 export const main = (): void => {
@@ -27,8 +29,8 @@ export const main = (): void => {
     ...PASSIVE_ITEMS,
     ...ACTIVE_ITEMS,
     ...TEARS,
+    ...PICKUPS,
     ...CHARACTERS,
-    NotePickup,
   ]);
 
   NotePickup.register();

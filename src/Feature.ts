@@ -5,7 +5,6 @@ import type { EIDExtended } from "./compat/EID";
 
 /** Abstract base class representing a custom feature. */
 export abstract class Feature extends ModFeature {
-  /** Creates a new item definition. */
   constructor(mod: ModUpgraded, init?: boolean) {
     super(mod, init);
     const ExEID = EID as EIDExtended | undefined;

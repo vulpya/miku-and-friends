@@ -63,18 +63,16 @@ const ENCORE_PICKUPS: ReadonlyArray<{
   // eslint-disable-next-line complete/require-unannotated-const-assertions
 ] as const;
 
-const ENCORE_ITEM = {
-  name: "Encore!",
-  description:
-    "25% chance to trigger an {{ColorRed}}Encore{{CR}} after clearing a room.#"
-    + "Enemies will respawn after {{ColorYellow}}5 seconds{{CR}} and drop a reward when defeated.#"
-    + "Leaving the room {{ColorGray}}cancels{{CR}} the Encore.",
-} as const;
+const ENCORE_DELAY = getFrames(5);
+const ENCORE_CHANCE = 15;
+
+const NAME = "Encore!";
+const DESCRIPTION =
+  `${ENCORE_CHANCE}% chance to trigger an {{ColorRed}}Encore{{CR}} after clearing a room.#`
+  + "Enemies will respawn after {{ColorYellow}}5 seconds{{CR}} and drop a reward when defeated.#"
+  + "Leaving the room {{ColorGray}}cancels{{CR}} the Encore.";
 
 export class EncoreItem extends Item {
-  private readonly encoreDelay = getFrames(5);
-  private readonly chance = 100;
-
   v: { room: EncoreRoomData } = { room: { ...DEFAULT_ROOM_DATA } };
 
   @CallbackCustom(ModCallbackCustom.POST_NEW_ROOM_REORDERED)
@@ -103,10 +101,7 @@ export class EncoreItem extends Item {
       position: e.Position,
     }));
 
-    Debugger.item(
-      ENCORE_ITEM.name,
-      `Enemies stored: ${this.v.room.enemies.length}`,
-    );
+    Debugger.item(NAME, `Enemies stored: ${this.v.room.enemies.length}`);
   }
 
   /**
@@ -135,12 +130,12 @@ export class EncoreItem extends Item {
       return true;
     }
 
-    if (rollChance(this.chance, rng)) {
+    if (rollChance(ENCORE_CHANCE, rng)) {
       this.v.room.triggered = true;
       this.v.room.active = true;
-      this.v.room.encoreDelayTimer = this.encoreDelay;
+      this.v.room.encoreDelayTimer = ENCORE_DELAY;
 
-      Debugger.item(ENCORE_ITEM.name, "Encore! triggered");
+      Debugger.item(NAME, "Encore! triggered");
       SFXManager().Play(SoundEffect.POWER_UP_1);
 
       return false;
@@ -154,7 +149,7 @@ export class EncoreItem extends Item {
    * completion to spawn a reward.
    */
   @Callback(ModCallback.POST_UPDATE)
-  onUpdate(): void {
+  override postUpdate(): void {
     if (!anyPlayerHasCollectible(CollectibleTypeCustom.ENCORE)) {
       return;
     }
@@ -178,10 +173,7 @@ export class EncoreItem extends Item {
       );
 
       if (!playerInRoom) {
-        Debugger.item(
-          ENCORE_ITEM.name,
-          "Player left the room. Encore cancelled.",
-        );
+        Debugger.item(NAME, "Player left the room. Encore cancelled.");
         this.v.room.active = false;
         this.v.room.triggered = false;
         this.v.room.encoreDelayTimer = undefined;
@@ -204,7 +196,7 @@ export class EncoreItem extends Item {
     // Check if Encore enemies are cleared.
     const aliveEnemies = getEnemies();
     if (aliveEnemies.length === 0) {
-      Debugger.item(ENCORE_ITEM.name, "Encore cleared!");
+      Debugger.item(NAME, "Encore cleared!");
       this.v.room.active = false;
       this.spawnEncoreReward(newRNG(room.GetSpawnSeed()));
     }
@@ -227,7 +219,7 @@ export class EncoreItem extends Item {
       );
     }
 
-    Debugger.item(ENCORE_ITEM.name, "Enemies respawned");
+    Debugger.item(NAME, "Enemies respawned");
   }
 
   /** Spawns a random pickup after clearing the Encore enemies. */
@@ -238,7 +230,7 @@ export class EncoreItem extends Item {
       ];
 
     if (!pickup) {
-      Debugger.item(ENCORE_ITEM.name, "Could'nt generate pickup");
+      Debugger.item(NAME, "Could'nt generate pickup");
       return;
     }
 
@@ -249,18 +241,14 @@ export class EncoreItem extends Item {
 
     spawnPickup(pickup.variant, subtype, spawnPos, VectorZero, undefined);
     Debugger.item(
-      ENCORE_ITEM.name,
+      NAME,
       `Spawned pickup: Variant ${pickup.variant}, Subtype ${subtype}`,
     );
   }
 
   /** Registers EID description for the Encore collectible. */
   override setupEID(eid: EIDExtended): void {
-    eid.addCollectible(
-      CollectibleTypeCustom.ENCORE,
-      ENCORE_ITEM.description,
-      ENCORE_ITEM.name,
-    );
-    Debugger.item(ENCORE_ITEM.name, "Setup EID compatibility");
+    eid.addCollectible(CollectibleTypeCustom.ENCORE, DESCRIPTION, NAME);
+    Debugger.item(NAME, "Setup EID compatibility");
   }
 }
