@@ -144,6 +144,9 @@ export abstract class Feature extends ModFeature {
   /** Optional callback triggered when a new room is entered. */
   onNewRoom?(): void;
 
+  /** Optional callback triggered before a room clear reward is spawned. */
+  onPreSpawnClearAward?(rng: RNG, _position: Vector): boolean | undefined;
+
   /** Optional callback triggered every frame (update tick). */
   postUpdate?(): void;
 

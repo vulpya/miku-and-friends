@@ -3,7 +3,7 @@ const DEBUG = {
   RNG: false,
   MATH: false,
   CHARACTERS: false,
-  ITEMS: false,
+  ITEMS: true,
   TEAR: false,
   PICKUP: false,
 } as const;

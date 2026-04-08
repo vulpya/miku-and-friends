@@ -9,11 +9,12 @@ import {
 import { NotePickup } from "./entities/pickups/NotePickup/NotePickup";
 import { GlitchNoteTear } from "./entities/tears/GlitchNoteTear/GlitchNoteTear";
 import { MusicalNoteTear } from "./entities/tears/MusicalNoteTear/MusicalNoteTear";
+import { EncoreItem } from "./items/EncoreItem/EncoreItemNew";
 import { MicrophoneItem } from "./items/MicrophoneItem/MicrophoneItem";
 import { VirtualIdolItem } from "./items/VirtualIdolItem/VirtualIdolItem";
 import { mod, MOD_NAME } from "./mod";
 
-const PASSIVE_ITEMS = [VirtualIdolItem] as const;
+const PASSIVE_ITEMS = [VirtualIdolItem, EncoreItem] as const;
 
 const ACTIVE_ITEMS = [MicrophoneItem] as const;
 

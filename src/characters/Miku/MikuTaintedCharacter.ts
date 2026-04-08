@@ -78,8 +78,6 @@ export class MikuTaintedCharacter extends Character {
 
     const loaded = jsonDecode(mod.LoadData()) as SaveData;
 
-    print(loaded.persistent);
-
     Object.assign(SAVE_DATA, loaded);
   }
 

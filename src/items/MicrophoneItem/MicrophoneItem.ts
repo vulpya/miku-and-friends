@@ -4,10 +4,10 @@ import type {
   UseFlag,
 } from "isaac-typescript-definitions";
 import { ModCallback } from "isaac-typescript-definitions";
-import { Callback, getEntities } from "isaacscript-common";
+import { Callback } from "isaacscript-common";
 import type { EIDExtended } from "../../compat/EID";
 import { Debugger } from "../../util/debug";
-import { charmEnemy, isCharmableEnemy } from "../../util/enemies";
+import { charmEnemy, getEnemies, isCharmableEnemy } from "../../util/enemies";
 import type { UseItemResult } from "../ActiveItem";
 import { ActiveItem } from "../ActiveItem";
 
@@ -65,9 +65,7 @@ export class MicrophoneItem extends ActiveItem {
     _slot: ActiveSlot,
     _data: int,
   ): UseItemResult {
-    const enemies = getEntities(-1, -1, -1, true).filter((e) =>
-      isCharmableEnemy(e),
-    );
+    const enemies = getEnemies().filter((e) => isCharmableEnemy(e));
 
     let count = 0;
     for (const enemy of enemies) {

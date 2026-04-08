@@ -1,5 +1,4 @@
-import type { EntityType } from "isaac-typescript-definitions";
-import { EffectVariant } from "isaac-typescript-definitions";
+import { EffectVariant, EntityType } from "isaac-typescript-definitions";
 import {
   getEntities,
   isActiveEnemy,
@@ -161,7 +160,6 @@ export const getEnemyKey = (npc: EntityNPC): string =>
  * @example
  * ```ts
  * const erasedCount = eraseEnemies(EntityType.ENTITY_FLY, 1);
- * print(`Removed ${erasedCount} enemies.`);
  * ```
  */
 export const eraseEnemies = (
@@ -186,3 +184,23 @@ export const eraseEnemies = (
   }
   return enemies.length;
 };
+
+/**
+ * Returns alive & vulnerable enemies in the current room.
+ *
+ * @param type Optional entity type to filter by. Defaults to any type.
+ * @param variant Optional variant to filter by. Defaults to any variant.
+ * @param subType Optional subType to filter by. Defaults to any subType.
+ * @returns Array of alive enemy entities matching the criteria.
+ */
+export const getEnemies = (
+  type: EntityType = EntityType.NULL,
+  variant = -1,
+  subType = -1,
+): readonly Entity[] =>
+  getEntities(
+    type === EntityType.NULL ? -1 : type,
+    variant,
+    subType,
+    true,
+  ).filter(isActiveEnemy);
