@@ -88,7 +88,6 @@ export class MikuTaintedCharacter extends Character {
     const players = getPlayersOfType(PlayerTypeCustom.MIKU_B);
 
     for (const player of players) {
-      const playerIndex = getPlayerIndex(player);
       const playerData = getData<TaintedMikuData>(player);
 
       if (!playerData.persistent) {
@@ -97,10 +96,14 @@ export class MikuTaintedCharacter extends Character {
 
       const { erased, notes } = playerData.persistent;
 
-      SAVE_DATA.players[playerIndex.toString()] = {
-        erased: erased ? [...erased] : [],
+      const serializedNotes = (notes ?? []).map((note) => ({
+        subType: note.subType,
+        remainingUses: note.remainingUses,
+      }));
 
-        notes: notes ?? [],
+      SAVE_DATA.players[player.ControllerIndex.toString()] = {
+        erased: erased ? [...erased] : [],
+        notes: serializedNotes,
       };
     }
 
@@ -140,16 +143,20 @@ export class MikuTaintedCharacter extends Character {
       return;
     }
 
-    const playerIndex = getPlayerIndex(player);
-    const saved = SAVE_DATA.players[playerIndex.toString()];
+    const saved = SAVE_DATA.players[player.ControllerIndex.toString()];
     if (!saved) {
       return;
     }
 
+    const deserializedNotes: NoteInstance[] = saved.notes.map((n) => ({
+      subType: n.subType,
+      remainingUses: n.remainingUses,
+    }));
+
     const playerData = getData<TaintedMikuData>(player);
     playerData.persistent = {
-      erased: saved.erased,
-      notes: saved.notes,
+      erased: [...saved.erased],
+      notes: deserializedNotes,
     };
   }
 
@@ -253,28 +260,37 @@ export class MikuTaintedCharacter extends Character {
       return;
     }
 
+    const controllerSides: Record<number, boolean> = {
+      0: false, // player 1 - left
+      1: true, // player 2 - right
+      2: false, // player 3 - left
+      3: true, // player 4 - right
+    };
+
     for (const player of players) {
       const playerData = getData<TaintedMikuData>(player);
       const notes = playerData.persistent?.notes;
-
       if (!notes || notes.length === 0) {
         continue;
       }
 
-      // HUD layout config.
-      const startX = 45; // Top-left X of the HUD note grid
-      const startY = 45; // Top-left Y of the HUD note grid
-      const spacing = 16; // Distance between notes
-      const baseSize = 14; // Base size for note sprites
-      const maxPerRow = 5; // Max notes per row
-      const maxRows = 2; // Max rows
-      const maxVisible = maxPerRow * maxRows; // Maximum notes to display in HUD
+      // Determine HUD side
+      const index = player.ControllerIndex;
+      const isRightSide = controllerSides[index] ?? false;
 
-      // Load sprites if not loaded.
+      // HUD layout config
+      const startX = isRightSide ? 300 : 45;
+      const startY = 45;
+      const spacing = 16;
+      const baseSize = 14;
+      const maxPerRow = 5;
+      const maxRows = 2;
+      const maxVisible = maxPerRow * maxRows;
+
       if (!this.noteSprite) {
         this.noteSprite = Sprite();
         this.noteSprite.Load("gfx/pickups/note.anm2", true);
-        this.noteSprite.Play("Idle", true); // Default animation
+        this.noteSprite.Play("Idle", true);
       }
 
       if (!this.activeNoteSprite) {
@@ -283,7 +299,7 @@ export class MikuTaintedCharacter extends Character {
         this.activeNoteSprite.Play("Idle", true);
       }
 
-      // Render Notes HUD.
+      // Render notes HUD
       const visibleNotes = notes.slice(0, maxVisible);
       for (const [i, note] of visibleNotes.entries()) {
         const row = Math.floor(i / maxPerRow);
@@ -292,14 +308,11 @@ export class MikuTaintedCharacter extends Character {
         const y = startY + row * spacing;
 
         const noteConfig = NOTE_TYPE_DATA[note.subType];
-
-        // Scale the active note slightly larger.
         this.noteSprite.Scale =
           i === 0
             ? Vector((baseSize / 16) * 1.2, (baseSize / 16) * 1.2)
             : Vector(baseSize / 16, baseSize / 16);
 
-        // Dim the note color if it has used up some of its uses.
         this.noteSprite.Color =
           note.remainingUses < noteConfig.uses
             ? Color(
@@ -316,16 +329,16 @@ export class MikuTaintedCharacter extends Character {
         this.noteSprite.Render(Vector(x, y));
       }
 
+      // Render active note above player.
       const activeNote = notes[0];
       if (activeNote) {
         const noteConfig = NOTE_TYPE_DATA[activeNote.subType];
-
         const screenPos: Vector = Isaac.WorldToScreen(player.Position);
 
         const floatX = screenPos.X;
-        const floatY = screenPos.Y - 50 + getWobbleOffset(0, 5, 0.05); // reduced wobble for subtlety
+        const floatY = screenPos.Y - 50 + getWobbleOffset(0, 5, 0.05); // subtle wobble
 
-        this.activeNoteSprite.Scale = Vector(1, 1); // normal size
+        this.activeNoteSprite.Scale = Vector(1, 1);
         this.activeNoteSprite.Color =
           activeNote.remainingUses < noteConfig.uses
             ? Color(
