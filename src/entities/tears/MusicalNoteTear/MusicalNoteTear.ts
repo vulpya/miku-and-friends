@@ -12,7 +12,7 @@ import {
 } from "isaacscript-common";
 import { isMiku } from "../../../characters/enum";
 import { Debugger } from "../../../util/debug";
-import { charmEnemy, isCharmableEnemy } from "../../../util/enemies";
+import { charmEnemy, isCharmable } from "../../../util/enemies";
 import { calcChance, rollFromChances } from "../../../util/rng";
 import { TearVariantCustom } from "../enum";
 import { spawnPoof } from "../helper";
@@ -27,11 +27,7 @@ interface MusicalNoteData {
   charmDuration: number;
 }
 
-const MUSICAL_NOTE_TEAR = {
-  name: "Musical Note",
-  description:
-    "Has a chance to charm enemies, with a small chance to charm permanently",
-} as const;
+const NAME = "Musical Note";
 
 const data: MusicalNoteData = {
   charmChance: 10,
@@ -49,7 +45,7 @@ export class MusicalNoteTear extends Tear {
    * Isaac through rooms.
    *
    * ### Notes
-   * - It **always returns `true`** to ensure normal damage continues processing.
+   * - Always returns **`true`** to ensure normal damage continues processing.
    *
    * @param entity The entity that is taking damage.
    * @param _amount The amount of damage dealt (currently unused in this method).
@@ -68,7 +64,7 @@ export class MusicalNoteTear extends Tear {
   ): boolean {
     if (
       source.Entity?.ToTear()?.Variant !== TearVariantCustom.MUSICAL_NOTE
-      || !isCharmableEnemy(entity)
+      || !isCharmable(entity)
     ) {
       return true;
     }
@@ -89,13 +85,10 @@ export class MusicalNoteTear extends Tear {
 
     if (result === 0) {
       charmEnemy(entity, 0, true);
-      Debugger.tear(MUSICAL_NOTE_TEAR.name, "Enemy charmed permanently");
+      Debugger.tear(NAME, "Enemy charmed permanently");
     } else if (result === 1) {
       charmEnemy(entity, this.v.charmDuration);
-      Debugger.tear(
-        MUSICAL_NOTE_TEAR.name,
-        `Enemy charmed for ${this.v.charmDuration / 30}s`,
-      );
+      Debugger.tear(NAME, `Enemy charmed for ${this.v.charmDuration}s`);
     }
 
     return true;

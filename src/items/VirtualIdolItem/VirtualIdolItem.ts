@@ -7,11 +7,9 @@ import { Debugger } from "../../util/debug";
 import { CollectibleTypeCustom } from "../enum";
 import { Item } from "../Item";
 
-const VIRTUAL_IDOL = {
-  name: "Virtual Idol",
-  description:
-    "Tears are now musical notes with a chance to charm enemies#sometimes enemies will be charmed permanently!",
-} as const;
+const NAME = "Virtual Idol";
+const DESCRIPTION =
+  "Tears are now musical notes with a chance to charm enemies#sometimes enemies will be charmed permanently!";
 
 export class VirtualIdolItem extends Item {
   /**
@@ -40,7 +38,7 @@ export class VirtualIdolItem extends Item {
     }
 
     tear.ChangeVariant(TearVariantCustom.MUSICAL_NOTE);
-    Debugger.item(VIRTUAL_IDOL.name, "'Musical Notes' applied");
+    Debugger.item(NAME, "'Musical Notes' applied");
   }
 
   /**
@@ -51,11 +49,7 @@ export class VirtualIdolItem extends Item {
    * @param eid Extended EID API instance.
    */
   override setupEID(eid: EIDExtended): void {
-    eid.addCollectible(
-      CollectibleTypeCustom.VIRTUAL_IDOL,
-      VIRTUAL_IDOL.description,
-      VIRTUAL_IDOL.name,
-    );
-    Debugger.item(VIRTUAL_IDOL.name, "Setup EID compatibility");
+    eid.addCollectible(CollectibleTypeCustom.VIRTUAL_IDOL, DESCRIPTION, NAME);
+    Debugger.eid(NAME, "Add description.");
   }
 }

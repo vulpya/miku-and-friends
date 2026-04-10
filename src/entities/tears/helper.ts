@@ -29,7 +29,8 @@ export const spawnPoof = (
  * @param speed The speed of the wobble, where higher values make the motion faster.
  * @returns The vertical offset value to add to the object's Y position.
  */
-export const getWobbleOffset = (
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const getWobbleOffset = (
   index: number,
   amplitude: number,
   speed: number,

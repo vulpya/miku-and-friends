@@ -6,7 +6,7 @@ import {
 } from "isaac-typescript-definitions";
 import {
   Callback,
-  getRandomFloat,
+  getRandom,
   spawnEffect,
   VectorZero,
 } from "isaacscript-common";
@@ -15,6 +15,7 @@ import { isMiku } from "../../../characters/enum";
 import type { TaintedMikuData } from "../../../characters/Miku/MikuTaintedCharacter";
 import { mod } from "../../../mod";
 import { getData } from "../../../util/data";
+import { Debugger } from "../../../util/debug";
 import { rollChance } from "../../../util/rng";
 import { PickupVariantCustom } from "../enum";
 import { Pickup } from "../Pickup";
@@ -68,7 +69,7 @@ export interface NoteInstance {
  * Applies visual effects and dynamic behavior to a NotePickup.
  *
  * - Sets the note's color based on its subtype.
- * - Applies smooth oscillating rotation to the sprite.
+ * - Applies smooth rotation to the sprite.
  * - Adds a slight horizontal sway for organic motion.
  * - Occasionally spawns small sparkle effects around the note.
  *
@@ -77,9 +78,9 @@ export interface NoteInstance {
  */
 const applyNotePickupVisuals = (pickup: EntityPickup, rng: RNG): void => {
   const subType = pickup.SubType as NotePickupSubType;
-  const config = NOTE_TYPE_DATA[subType];
+  const noteData = NOTE_TYPE_DATA[subType];
 
-  pickup.SetColor(config.color, -1, 0);
+  pickup.SetColor(noteData.color, -1, 0);
 
   // Oscillating rotation
   pickup.SpriteRotation =
@@ -87,13 +88,13 @@ const applyNotePickupVisuals = (pickup: EntityPickup, rng: RNG): void => {
 
   // Slight horizontal sway
   if (rollChance(20, rng)) {
-    const sway = getRandomFloat(0, 1, rng) * 0.4 - 0.2; // [-0.2, 0.2)
+    const sway = getRandom(rng) * 0.4 - 0.2; // [-0.2, 0.2)
     pickup.Position = pickup.Position.add(Vector(sway, 0));
   }
 
   // Small sparkling effect
-  if (rollChance(30, rng)) {
-    const ghost = spawnEffect(
+  if (pickup.GetSprite().IsPlaying("Idle") && rollChance(30, rng)) {
+    const sparkle = spawnEffect(
       EffectVariant.TEAR_POOF_A,
       0,
       pickup.Position,
@@ -102,9 +103,9 @@ const applyNotePickupVisuals = (pickup: EntityPickup, rng: RNG): void => {
     );
 
     const scale = 0.2 + rng.RandomFloat() * 0.1;
-    ghost.SpriteScale = Vector(scale, scale);
-    ghost.SetColor(pickup.GetColor(), -1, 1);
-    ghost.Timeout = 8 + Math.floor(rng.RandomFloat() * 4);
+    sparkle.SpriteScale = Vector(scale, scale);
+    sparkle.SetColor(pickup.GetColor(), -1, 1);
+    sparkle.Timeout = 8 + Math.floor(rng.RandomFloat() * 4);
   }
 };
 
@@ -133,24 +134,25 @@ export class NotePickup extends Pickup {
    * - Adds entries to EID if available for in-game descriptions.
    */
   static register(): void {
-    for (const [subTypeKey, noteConfig] of Object.entries(NOTE_TYPE_DATA)) {
+    for (const [subTypeKey, noteData] of Object.entries(NOTE_TYPE_DATA)) {
       const subType = Number(subTypeKey) as NotePickupSubType;
 
       mod.registerCustomPickup(
         PickupVariantCustom.NOTE,
         subType,
         (pickup, player) => {
-          const mikuData = getData<TaintedMikuData>(player);
+          const playerData = getData<TaintedMikuData>(player);
+          const noteData = NOTE_TYPE_DATA[pickup.SubType as NotePickupSubType];
 
-          mikuData.persistent ??= { notes: [], erased: [] };
+          playerData.erased ??= [];
+          playerData.notes ??= [];
 
-          mikuData.persistent.notes?.push({
+          playerData.notes.push({
             subType: pickup.SubType as NotePickupSubType,
-            remainingUses:
-              NOTE_TYPE_DATA[pickup.SubType as NotePickupSubType].uses,
+            remainingUses: noteData.uses,
           });
 
-          SFXManager().Play(SoundEffect.KEY_PICKUP_GAUNTLET);
+          SFXManager().Play(SoundEffect.SOUL_PICKUP, 0.8, 2, false, 1);
         },
         (_, player) => (isMiku(player, true) ? undefined : true),
       );
@@ -160,10 +162,22 @@ export class NotePickup extends Pickup {
           EntityType.PICKUP,
           PickupVariantCustom.NOTE,
           subType,
-          noteConfig.name,
-          noteConfig.description,
+          noteData.name,
+          this.addUses(noteData),
         );
+
+        Debugger.eid(noteData.name, `Note: ${noteData.name} (${subType})`);
       }
     }
+  }
+
+  private static addUses(note: NoteTypeConfig) {
+    let { description } = note;
+    description =
+      note.uses === 1
+        ? `{{Warning}} SINGLE USE {{Warning}}#${description}`
+        : `${description}(${note.uses} charges)`;
+
+    return description;
   }
 }

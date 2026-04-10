@@ -18,3 +18,4 @@
 - [x] Fix Tainted Miku Co-Op UI not working
 - [ ] Fix Ludo breaking Tainted Miku mechanic
 - [ ] Fix multiple Tainted Miku copying all notes from Player 1 when continuing a run
+- [ ] Fix active note being rendered in cutscenes like the Boss VS Screen or during Room transitions

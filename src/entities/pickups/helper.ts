@@ -4,9 +4,23 @@ import {
 } from "isaac-typescript-definitions";
 import { spawnPickup } from "isaacscript-common";
 import { Debugger } from "../../util/debug";
-import type { NotePickupSubType } from "./NotePickup/NotePickupSubType";
-import { NOTE_TYPE_DATA } from "./NotePickup/NotePickupSubType";
+import {
+  NOTE_TYPE_DATA,
+  NotePickupSubType,
+} from "./NotePickup/NotePickupSubType";
 import { PickupVariantCustom } from "./enum";
+
+const getRandomNote = (): NotePickupSubType => {
+  const keys = Object.keys(NOTE_TYPE_DATA);
+
+  if (keys.length === 0) {
+    return NotePickupSubType.LOVE;
+  }
+
+  return Number(
+    keys[Math.floor(Math.random() * keys.length)],
+  ) as NotePickupSubType;
+};
 
 /**
  * Spawns a colored `NotePickup` at the specified position.
@@ -19,8 +33,10 @@ export const spawnNotePickup = (
   subType: NotePickupSubType,
   position: Vector,
 ): EntityPickup => {
-  const pickup = spawnPickup(PickupVariantCustom.NOTE, subType, position);
-  const note = NOTE_TYPE_DATA[subType];
+  const validSubType = subType in NOTE_TYPE_DATA ? subType : getRandomNote();
+
+  const note = NOTE_TYPE_DATA[validSubType];
+  const pickup = spawnPickup(PickupVariantCustom.NOTE, validSubType, position);
 
   const sprite = pickup.GetSprite();
   sprite.Color = note.color;

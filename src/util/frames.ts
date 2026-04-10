@@ -1,5 +1,5 @@
 /** Number of frames representing one second. */
-const ONCE_SECOND_IN_FRAMES = 30;
+const ONCE_SECOND_IN_FRAMES: int = 30;
 
 /**
  * Converts a duration in seconds to frames.
@@ -7,5 +7,5 @@ const ONCE_SECOND_IN_FRAMES = 30;
  * @param seconds The duration in seconds.
  * @returns The equivalent number of frames.
  */
-export const getFrames = (seconds: number): number =>
-  seconds * ONCE_SECOND_IN_FRAMES;
+export const getFrames = (seconds: float): int =>
+  Math.floor(seconds * ONCE_SECOND_IN_FRAMES);

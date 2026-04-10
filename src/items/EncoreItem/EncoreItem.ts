@@ -10,7 +10,7 @@ import {
   Callback,
   CallbackCustom,
   getEntities,
-  getRandomFloat,
+  getRandom,
   ModCallbackCustom,
   newRNG,
   setRoomUncleared,
@@ -49,6 +49,7 @@ const DEFAULT_ROOM_DATA: EncoreRoomData = {
   // eslint-disable-next-line complete/require-unannotated-const-assertions
 } as const;
 
+// TODO: Balance pickups.
 const ENCORE_PICKUPS: ReadonlyArray<{
   variant: PickupVariant;
   maxSubtype: number;
@@ -77,8 +78,6 @@ export class EncoreItem extends Item {
 
   @CallbackCustom(ModCallbackCustom.POST_NEW_ROOM_REORDERED)
   override onNewRoom(): void {
-    this.v.room = { ...DEFAULT_ROOM_DATA };
-
     if (!anyPlayerHasCollectible(CollectibleTypeCustom.ENCORE)) {
       return;
     }
@@ -136,7 +135,7 @@ export class EncoreItem extends Item {
       this.v.room.encoreDelayTimer = ENCORE_DELAY;
 
       Debugger.item(NAME, "Encore! triggered");
-      SFXManager().Play(SoundEffect.POWER_UP_1);
+      SFXManager().Play(SoundEffect.POWER_UP_1, 2);
 
       return false;
     }
@@ -186,7 +185,7 @@ export class EncoreItem extends Item {
 
       if (this.v.room.encoreDelayTimer <= 0) {
         this.spawnEncoreEnemies();
-        SFXManager().Play(SoundEffect.HAPPY_RAINBOW);
+        SFXManager().Play(SoundEffect.HAPPY_RAINBOW, 0.75);
         this.v.room.encoreDelayTimer = undefined;
       }
 
@@ -207,6 +206,7 @@ export class EncoreItem extends Item {
    */
   private spawnEncoreEnemies(): void {
     setRoomUncleared();
+    // TODO: Enemies in Encore should get buffed.
 
     for (const enemy of this.v.room.enemies ?? []) {
       spawn(
@@ -225,18 +225,14 @@ export class EncoreItem extends Item {
   /** Spawns a random pickup after clearing the Encore enemies. */
   private spawnEncoreReward(rng: RNG): void {
     const pickup =
-      ENCORE_PICKUPS[
-        Math.floor(getRandomFloat(0, 1, rng) * ENCORE_PICKUPS.length)
-      ];
+      ENCORE_PICKUPS[Math.floor(getRandom(rng) * ENCORE_PICKUPS.length)];
 
     if (!pickup) {
       Debugger.item(NAME, "Could'nt generate pickup");
       return;
     }
 
-    const subtype = Math.floor(
-      getRandomFloat(0, 1, rng) * (pickup.maxSubtype + 1),
-    );
+    const subtype = Math.floor(getRandom(rng) * (pickup.maxSubtype + 1));
     const spawnPos = getValidRoomPosition();
 
     spawnPickup(pickup.variant, subtype, spawnPos, VectorZero, undefined);
@@ -249,6 +245,6 @@ export class EncoreItem extends Item {
   /** Registers EID description for the Encore collectible. */
   override setupEID(eid: EIDExtended): void {
     eid.addCollectible(CollectibleTypeCustom.ENCORE, DESCRIPTION, NAME);
-    Debugger.item(NAME, "Setup EID compatibility");
+    Debugger.eid(NAME, "Add description.");
   }
 }

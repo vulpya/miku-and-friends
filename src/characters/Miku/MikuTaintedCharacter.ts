@@ -1,7 +1,9 @@
 import type { DamageFlag } from "isaac-typescript-definitions";
 import {
+  ActiveSlot,
   ButtonAction,
   CacheFlag,
+  EntityFlag,
   ModCallback,
   PlayerVariant,
   SoundEffect,
@@ -14,6 +16,7 @@ import {
   getPlayerFromIndex,
   getPlayerIndex,
   getPlayersOfType,
+  getRandom,
   isActiveEnemy,
   jsonDecode,
   jsonEncode,
@@ -29,47 +32,49 @@ import {
 } from "../../entities/pickups/NotePickup/NotePickupSubType";
 import { TearVariantCustom } from "../../entities/tears/enum";
 import type { GlitchNoteTearData } from "../../entities/tears/GlitchNoteTear/GlitchNoteTear";
-import { getWobbleOffset } from "../../entities/tears/helper";
+import { CollectibleTypeCustom } from "../../items/enum";
 import { mod } from "../../mod";
-import { setTearColor } from "../../util";
 import { getData } from "../../util/data";
 import { Debugger } from "../../util/debug";
+import { setTearColor } from "../../util/effects";
 import { eraseEnemies, getEnemyKey } from "../../util/enemies";
 import { rollWeighted } from "../../util/rng";
 import { SAVE_DATA } from "../../util/save";
 import { Character } from "../Character";
 import { isMiku, PlayerTypeCustom } from "../enum";
 
-const npcLastHitPlayer = new Map<Seed, PlayerIndex>();
-
 export interface TaintedMikuData {
-  persistent?: {
-    erased?: string[];
-    notes?: NoteInstance[];
-  };
+  erased?: string[];
+  notes?: NoteInstance[];
+  useNotes?: boolean;
 }
 
-export interface SerializedTaintedMikuData {
-  erased: string[];
-  notes: NoteInstance[];
-}
-
-const MIKU_TAINTED_CONFIG = {
-  name: "Miku",
-  description: "An idol twisted, using enemies as her melody.",
-  birthrightDesc: "TODO",
-  costumes: {
-    hair: Isaac.GetCostumeIdByPath("gfx/characters/Character_MikuHead.anm2"),
-  },
-  noteDropChance: 100,
-} as const;
+const NAME = "Miku";
+const DESCRIPTION = "An idol twisted, using enemies as her melody.";
+const BIRTHRIGHT_DESC = "TODO";
+const HAIR = Isaac.GetCostumeIdByPath("gfx/characters/Character_MikuHead.anm2");
+const POCKET_ACTIVE = CollectibleTypeCustom.BROKEN_VOICE;
+const NOTE_DROP_CHANCE = 100;
 
 export const MIKU_B_STATS = new ReadonlyMap<CacheFlag, number>([
   [CacheFlag.DAMAGE, 3.2],
-  [CacheFlag.FIRE_DELAY, 3],
+  [CacheFlag.FIRE_DELAY, 2.25],
+  [CacheFlag.LUCK, -1],
+  [CacheFlag.COLOR, 2],
 ]);
 
 export class MikuTaintedCharacter extends Character {
+  /** Spritesheet with icons for HUD. */
+  private noteSprite: Sprite | undefined = undefined;
+  /** Spritesheet with icons for selected note display. */
+  private activeNoteSprite: Sprite | undefined = undefined;
+  /** Font for the uses text of the notes. */
+  private font: Font | undefined = undefined;
+  /** Map to track which player made the last hit on an enemy. */
+  private readonly npcLastHitPlayer = new Map<Seed, PlayerIndex>();
+  /** Tracker for hold input. */
+  private readonly dropHoldFrames = new Map<PlayerIndex, int>();
+
   @CallbackCustom(ModCallbackCustom.POST_GAME_STARTED_REORDERED, true)
   override onGameStart(isContinued: boolean): void {
     if (!isContinued || !mod.HasData()) {
@@ -90,20 +95,11 @@ export class MikuTaintedCharacter extends Character {
     for (const player of players) {
       const playerData = getData<TaintedMikuData>(player);
 
-      if (!playerData.persistent) {
-        continue;
-      }
-
-      const { erased, notes } = playerData.persistent;
-
-      const serializedNotes = (notes ?? []).map((note) => ({
-        subType: note.subType,
-        remainingUses: note.remainingUses,
-      }));
+      const { erased, notes } = playerData;
 
       SAVE_DATA.players[player.ControllerIndex.toString()] = {
         erased: erased ? [...erased] : [],
-        notes: serializedNotes,
+        notes: notes ? [...notes] : [],
       };
     }
 
@@ -123,11 +119,18 @@ export class MikuTaintedCharacter extends Character {
     PlayerTypeCustom.MIKU_B,
   )
   override postPlayerInitFirst(player: EntityPlayer): void {
-    player.AddNullCostume(MIKU_TAINTED_CONFIG.costumes.hair);
-    Debugger.char(
-      `${MIKU_TAINTED_CONFIG.name} (Tainted)`,
-      `applied null costume: ${MIKU_TAINTED_CONFIG.costumes.hair}`,
-    );
+    const playerData = getData<TaintedMikuData>(player);
+    playerData.erased = [];
+    playerData.notes = [];
+    playerData.useNotes = false;
+
+    player.AddNullCostume(HAIR);
+    Debugger.char(`${NAME} (Tainted)`, `Applied null costume: ${HAIR}`);
+
+    if (!player.HasCollectible(POCKET_ACTIVE)) {
+      player.SetPocketActiveItem(POCKET_ACTIVE, ActiveSlot.POCKET, false);
+      Debugger.char(NAME, "Give microphone pocket active item");
+    }
   }
 
   /**
@@ -148,16 +151,10 @@ export class MikuTaintedCharacter extends Character {
       return;
     }
 
-    const deserializedNotes: NoteInstance[] = saved.notes.map((n) => ({
-      subType: n.subType,
-      remainingUses: n.remainingUses,
-    }));
-
     const playerData = getData<TaintedMikuData>(player);
-    playerData.persistent = {
-      erased: [...saved.erased],
-      notes: deserializedNotes,
-    };
+    playerData.erased = saved.erased;
+    playerData.notes = saved.notes;
+    playerData.useNotes = saved.useNotes;
   }
 
   @CallbackCustom(
@@ -167,18 +164,30 @@ export class MikuTaintedCharacter extends Character {
   )
   override postPlayerUpdate(player: EntityPlayer): void {
     const playerData = getData<TaintedMikuData>(player);
-    const notes = playerData.persistent?.notes;
-    if (!notes || notes.length <= 1) {
+    const { notes, useNotes } = playerData;
+
+    if (!notes || notes.length === 0) {
       return;
     }
 
-    if (Input.IsActionTriggered(ButtonAction.DROP, player.ControllerIndex)) {
+    const isTapping = Input.IsActionTriggered(
+      ButtonAction.DROP,
+      player.ControllerIndex,
+    );
+
+    if (!(useNotes ?? false) && isTapping && notes.length > 1) {
       const firstNote = notes.shift();
       if (firstNote) {
         notes.push(firstNote);
       }
 
-      SFXManager().Play(SoundEffect.COIN_SLOT);
+      SFXManager().Play(
+        SoundEffect.SOUL_PICKUP,
+        0.8,
+        2,
+        false,
+        1 + (getRandom(player.GetDropRNG()) * 0.15 - 0.075),
+      );
     }
   }
 
@@ -206,8 +215,8 @@ export class MikuTaintedCharacter extends Character {
     }
 
     const playerData = getData<TaintedMikuData>(player);
-    const notes = playerData.persistent?.notes;
-    if (!notes || notes.length === 0) {
+    const { notes, useNotes } = playerData;
+    if ((useNotes ?? false) || !notes || notes.length === 0) {
       return;
     }
 
@@ -216,11 +225,11 @@ export class MikuTaintedCharacter extends Character {
       return;
     }
 
-    const noteConfig = NOTE_TYPE_DATA[note.subType];
+    const noteData = NOTE_TYPE_DATA[note.subType];
     const tearData = getData<GlitchNoteTearData>(tear);
 
-    tearData.color = noteConfig.color;
-    noteConfig.applyEffect(player, tear);
+    tearData.color = noteData.color;
+    noteData.applyEffect(player, tear);
 
     note.remainingUses--;
     if (note.remainingUses <= 0) {
@@ -236,22 +245,17 @@ export class MikuTaintedCharacter extends Character {
     }
 
     for (const player of players) {
-      const mikuData = getData<TaintedMikuData>(player);
-      if (!mikuData.persistent?.erased) {
+      const playerData = getData<TaintedMikuData>(player);
+      if (!playerData.erased) {
         return;
       }
 
-      if (mikuData.persistent.erased.includes(getEnemyKey(npc))) {
+      if (playerData.erased.includes(getEnemyKey(npc))) {
         const erased = eraseEnemies(npc.Type, npc.Variant);
-        Debugger.char(MIKU_TAINTED_CONFIG.name, `Erased ${erased} enemies.`);
+        Debugger.char(NAME, `Erased ${erased} enemies.`);
       }
     }
   }
-
-  /** Spritesheet with icons for HUD. */
-  private noteSprite: Sprite | undefined = undefined;
-  /** Spritesheet with icons for selected note display. */
-  private activeNoteSprite: Sprite | undefined = undefined;
 
   @Callback(ModCallback.POST_RENDER)
   render(): void {
@@ -269,7 +273,7 @@ export class MikuTaintedCharacter extends Character {
 
     for (const player of players) {
       const playerData = getData<TaintedMikuData>(player);
-      const notes = playerData.persistent?.notes;
+      const { notes, useNotes } = playerData;
       if (!notes || notes.length === 0) {
         continue;
       }
@@ -299,6 +303,14 @@ export class MikuTaintedCharacter extends Character {
         this.activeNoteSprite.Play("Idle", true);
       }
 
+      const RENDER_TEXT = false;
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (RENDER_TEXT && !this.font) {
+        this.font = Font();
+        this.font.Load("font/pftempestasevencondensed.fnt");
+      }
+
       // Render notes HUD
       const visibleNotes = notes.slice(0, maxVisible);
       for (const [i, note] of visibleNotes.entries()) {
@@ -313,7 +325,7 @@ export class MikuTaintedCharacter extends Character {
             ? Vector((baseSize / 16) * 1.2, (baseSize / 16) * 1.2)
             : Vector(baseSize / 16, baseSize / 16);
 
-        this.noteSprite.Color =
+        const baseColor =
           note.remainingUses < noteConfig.uses
             ? Color(
                 noteConfig.color.R * (note.remainingUses / noteConfig.uses),
@@ -326,20 +338,44 @@ export class MikuTaintedCharacter extends Character {
               )
             : noteConfig.color;
 
+        this.noteSprite.Color =
+          (useNotes ?? false)
+            ? Color(
+                baseColor.R * 0.35,
+                baseColor.G * 0.35,
+                baseColor.B * 0.35,
+                baseColor.A,
+                0,
+                0,
+                0,
+              )
+            : baseColor;
+
         this.noteSprite.Render(Vector(x, y));
       }
 
-      // Render active note above player.
+      const game = Game();
+      const hud = game.GetHUD();
+
+      const isPausedCutscene =
+        !hud.IsVisible() || game.GetRoom().GetFrameCount() < 5;
+
+      // Render 'selected' note above player.
       const activeNote = notes[0];
-      if (activeNote) {
+
+      if (!(useNotes ?? false) && activeNote && !isPausedCutscene) {
         const noteConfig = NOTE_TYPE_DATA[activeNote.subType];
         const screenPos: Vector = Isaac.WorldToScreen(player.Position);
 
         const floatX = screenPos.X;
-        const floatY = screenPos.Y - 50 + getWobbleOffset(0, 5, 0.05); // subtle wobble
+        const floatY = screenPos.Y - 50;
 
-        this.activeNoteSprite.Scale = Vector(1, 1);
-        this.activeNoteSprite.Color =
+        const pulse = 1 + Math.sin(Game().GetFrameCount() * 0.2) * 0.08;
+        const breath = 0.85 + Math.sin(Game().GetFrameCount() * 0.1) * 0.15;
+
+        this.activeNoteSprite.Scale = Vector(pulse, pulse);
+
+        const baseColor =
           activeNote.remainingUses < noteConfig.uses
             ? Color(
                 noteConfig.color.R
@@ -355,7 +391,48 @@ export class MikuTaintedCharacter extends Character {
               )
             : noteConfig.color;
 
+        this.activeNoteSprite.Color = Color(
+          baseColor.R * breath,
+          baseColor.G * breath,
+          baseColor.B * breath,
+          1,
+          0,
+          0,
+          0,
+        );
+
         this.activeNoteSprite.Render(Vector(floatX, floatY));
+
+        if (this.font !== undefined) {
+          const text = `${activeNote.remainingUses}`;
+          const textScale = 0.5;
+          const textX = floatX + 6;
+          const textY = floatY + 6;
+
+          // shadow
+          this.font.DrawStringScaled(
+            text,
+            textX + 1,
+            textY + 1,
+            textScale,
+            textScale,
+            KColor(0, 0, 0, 1),
+            0,
+            true,
+          );
+
+          // main
+          this.font.DrawStringScaled(
+            text,
+            textX,
+            textY,
+            textScale,
+            textScale,
+            KColor(1, 1, 1, 1),
+            0,
+            true,
+          );
+        }
       }
     }
   }
@@ -379,13 +456,16 @@ export class MikuTaintedCharacter extends Character {
 
     const tear = source.Entity.ToTear();
     if (tear) {
-      const data = getData<GlitchNoteTearData>(tear);
-      if (data.onHitEnemy && isActiveEnemy(entity)) {
-        data.onHitEnemy(entity as EntityNPC);
+      const tearData = getData<GlitchNoteTearData>(tear);
+      if (tearData.onHitEnemy && isActiveEnemy(entity)) {
+        tearData.onHitEnemy(entity as EntityNPC);
       }
     }
 
-    npcLastHitPlayer.set(entity.InitSeed, getPlayerIndex(player));
+    if (!entity.HasEntityFlags(EntityFlag.NO_REWARD)) {
+      this.npcLastHitPlayer.set(entity.InitSeed, getPlayerIndex(player));
+    }
+
     return true;
   }
 
@@ -398,8 +478,8 @@ export class MikuTaintedCharacter extends Character {
    */
   @Callback(ModCallback.POST_NPC_DEATH)
   override postNPCDeath(npc: EntityNPC): void {
-    const lastHit = npcLastHitPlayer.get(npc.InitSeed);
-    npcLastHitPlayer.delete(npc.InitSeed);
+    const lastHit = this.npcLastHitPlayer.get(npc.InitSeed);
+    this.npcLastHitPlayer.delete(npc.InitSeed);
 
     if (lastHit === undefined) {
       return;
@@ -419,7 +499,7 @@ export class MikuTaintedCharacter extends Character {
       NOTE_SUBTYPES,
       NOTE_SUBTYPES.map((s) => NOTE_TYPE_DATA[s].weight),
       rng,
-      MIKU_TAINTED_CONFIG.noteDropChance,
+      NOTE_DROP_CHANCE,
     );
 
     Debugger.rng(
@@ -458,19 +538,11 @@ export class MikuTaintedCharacter extends Character {
       0,
       icons,
     );
-    eid.addCharacterInfo(
-      PlayerTypeCustom.MIKU_B,
-      MIKU_TAINTED_CONFIG.description,
-      MIKU_TAINTED_CONFIG.name,
-    );
-    eid.addBirthright(
-      PlayerTypeCustom.MIKU_B,
-      MIKU_TAINTED_CONFIG.birthrightDesc,
-      MIKU_TAINTED_CONFIG.name,
-    );
-    Debugger.char(
-      `${MIKU_TAINTED_CONFIG.name} (Tainted)`,
-      "Setup EID compatibility",
+    eid.addCharacterInfo(PlayerTypeCustom.MIKU_B, DESCRIPTION, NAME);
+    eid.addBirthright(PlayerTypeCustom.MIKU_B, BIRTHRIGHT_DESC, NAME);
+    Debugger.eid(
+      `${NAME} (Tainted)`,
+      "Add description and birthright description.",
     );
   }
 }

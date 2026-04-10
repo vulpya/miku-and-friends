@@ -1,4 +1,4 @@
-import { getRandomFloat } from "isaacscript-common";
+import { getRandom } from "isaacscript-common";
 import type { TearData } from "../entities/tears/Tear";
 import { rollChance } from "./rng";
 
@@ -17,8 +17,8 @@ export const setTearColor = (
   tearData: TearData,
   rng: RNG,
 ): void => {
-  const brightness = getRandomFloat(0, 1, rng) * 0.45;
-  const alpha = 0.6 + getRandomFloat(0, 1, rng) * 0.3;
+  const brightness = getRandom(rng) * 0.45;
+  const alpha = 0.6 + getRandom(rng) * 0.3;
   const color =
     tearData.color ?? Color(brightness, brightness, brightness, alpha, 0, 0, 0);
   tear.SetColor(color, -1, 1);
@@ -36,8 +36,8 @@ export const setTearColor = (
  */
 export const applyPositionJitter = (tear: EntityTear, rng: RNG): void => {
   if (rollChance(15, rng, 0)) {
-    const jitterX = (getRandomFloat(0, 1, rng) - 0.5) * 0.3;
-    const jitterY = (getRandomFloat(0, 1, rng) - 0.5) * 0.3;
+    const jitterX = (getRandom(rng) - 0.5) * 0.3;
+    const jitterY = (getRandom(rng) - 0.5) * 0.3;
     tear.Position = tear.Position.add(Vector(jitterX, jitterY));
   }
 };
@@ -53,7 +53,7 @@ export const applyPositionJitter = (tear: EntityTear, rng: RNG): void => {
  */
 export const applyRotationShift = (tear: EntityTear, rng: RNG): void => {
   if (rollChance(20, rng, 0)) {
-    const rotationShift = (getRandomFloat(0, 1, rng) - 0.5) * 4;
+    const rotationShift = (getRandom(rng) - 0.5) * 4;
     tear.SpriteRotation += rotationShift;
   }
 };

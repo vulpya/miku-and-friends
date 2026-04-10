@@ -7,44 +7,16 @@ import { ModCallback } from "isaac-typescript-definitions";
 import { Callback } from "isaacscript-common";
 import type { EIDExtended } from "../../compat/EID";
 import { Debugger } from "../../util/debug";
-import { charmEnemy, getEnemies, isCharmableEnemy } from "../../util/enemies";
+import { charmEnemy, getEnemies, isCharmable } from "../../util/enemies";
 import type { UseItemResult } from "../ActiveItem";
 import { ActiveItem } from "../ActiveItem";
+import { CollectibleTypeCustom } from "../enum";
 
-const MICROPHONE = {
-  /** Item name for the Microphone. */
-  NAME: "Microphone",
-  /** Item description for Microphone. */
-  DESCRIPTION: "Charms all enemies in the room, making them permanent fans",
-  /** Item type for Microphone. */
-  TYPE: Isaac.GetItemIdByName("Microphone"),
-} as const;
+const NAME = "Microphone";
+const DESCRIPTION =
+  "Charms all enemies in the room, making them permanent fans";
 
 export class MicrophoneItem extends ActiveItem {
-  /**
-   * Static accessor for the `Microphone` collectible ID.
-   *
-   * @returns The {@link CollectibleType} assigned to this item.
-   */
-  static getType(): CollectibleType {
-    return MICROPHONE.TYPE;
-  }
-
-  /** Display name of the item as shown in-game. */
-  get name(): string {
-    return MICROPHONE.NAME;
-  }
-
-  /** The {@link CollectibleType} identifier for this item. */
-  get type(): CollectibleType {
-    return MicrophoneItem.getType();
-  }
-
-  /** Description text shown in item tooltips or external description mods. */
-  get description(): string {
-    return MICROPHONE.DESCRIPTION;
-  }
-
   /**
    * Handles the use of the Microphone active item.
    *
@@ -56,7 +28,7 @@ export class MicrophoneItem extends ActiveItem {
    * - Keeps the item
    * - Plays the use animation
    */
-  @Callback(ModCallback.POST_USE_ITEM, MICROPHONE.TYPE)
+  @Callback(ModCallback.POST_USE_ITEM, CollectibleTypeCustom.MICROPHONE)
   override onPostUseItem(
     _collectibleType: CollectibleType,
     _rng: RNG,
@@ -65,7 +37,7 @@ export class MicrophoneItem extends ActiveItem {
     _slot: ActiveSlot,
     _data: int,
   ): UseItemResult {
-    const enemies = getEnemies().filter((e) => isCharmableEnemy(e));
+    const enemies = getEnemies().filter(isCharmable);
 
     let count = 0;
     for (const enemy of enemies) {
@@ -73,7 +45,7 @@ export class MicrophoneItem extends ActiveItem {
       count++;
     }
 
-    Debugger.item(this.name, `Turned ${count} enemies into fan(s).`);
+    Debugger.item(NAME, `Turned ${count} enemies into fan(s).`);
 
     return {
       Discharge: true,
@@ -83,7 +55,7 @@ export class MicrophoneItem extends ActiveItem {
   }
 
   override setupEID(eid: EIDExtended): void {
-    eid.addCollectible(this.type, this.description);
-    Debugger.item(this.name, "Setup EID compatibility.");
+    eid.addCollectible(CollectibleTypeCustom.MICROPHONE, DESCRIPTION);
+    Debugger.eid(NAME, "Add description.");
   }
 }

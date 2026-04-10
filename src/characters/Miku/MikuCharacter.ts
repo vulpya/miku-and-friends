@@ -10,6 +10,7 @@ import {
 } from "isaacscript-common";
 import type { EIDExtended } from "../../compat/EID";
 import { CollectibleTypeCustom } from "../../items/enum";
+import { getData } from "../../util/data";
 import { Debugger } from "../../util/debug";
 import { Character } from "../Character";
 import { PlayerTypeCustom } from "../enum";
@@ -18,20 +19,12 @@ interface MikuPlayerData {
   hasIdol?: boolean;
 }
 
-const data: MikuPlayerData = {
-  hasIdol: false,
-};
-
-const MIKU_CONFIG = {
-  name: "Miku",
-  description: "Uses music to charm enemies. Some may even become fans!",
-  birthrightDesc: "Chance to permanently charm enemies scales with Luck.",
-  pocketActive: CollectibleTypeCustom.MICROPHONE,
-  nullItem: CollectibleTypeCustom.MIKU_IDOL,
-  costumes: {
-    hair: Isaac.GetCostumeIdByPath("gfx/characters/Character_MikuHead.anm2"),
-  },
-} as const;
+const NAME = "Miku";
+const DESCRIPTION = "Uses music to charm enemies. Some may even become fans!";
+const BIRTHRIGHT_DESC = "Chance to permanently charm enemies scales with Luck.";
+const ACTIVE = CollectibleTypeCustom.MICROPHONE;
+const NULL_ITEM = CollectibleTypeCustom.MIKU_IDOL;
+const HAIR = Isaac.GetCostumeIdByPath("gfx/characters/Character_MikuHead.anm2");
 
 export const MIKU_STATS = new ReadonlyMap<CacheFlag, number>([
   [CacheFlag.SPEED, 1.15],
@@ -40,8 +33,6 @@ export const MIKU_STATS = new ReadonlyMap<CacheFlag, number>([
 ]);
 
 export class MikuCharacter extends Character {
-  v = data;
-
   /**
    * Called after Miku is initialized.
    *
@@ -56,28 +47,20 @@ export class MikuCharacter extends Character {
     PlayerTypeCustom.MIKU,
   )
   override postPlayerInitFirst(player: EntityPlayer): void {
-    player.AddNullCostume(MIKU_CONFIG.costumes.hair);
-    Debugger.char(
-      MIKU_CONFIG.name,
-      `applied null costume: ${MIKU_CONFIG.costumes.hair}`,
-    );
+    player.AddNullCostume(HAIR);
+    Debugger.char(NAME, `applied null costume: ${HAIR}`);
 
-    if (!(this.v.hasIdol ?? false)) {
-      player.AddCollectible(MIKU_CONFIG.nullItem, 0);
-      this.v.hasIdol = true;
-      Debugger.char(
-        MIKU_CONFIG.name,
-        `applied null item: ${MIKU_CONFIG.nullItem}`,
-      );
+    const playerData = getData<MikuPlayerData>(player);
+
+    if (!(playerData.hasIdol ?? false)) {
+      player.AddCollectible(NULL_ITEM, 0);
+      playerData.hasIdol = true;
+      Debugger.char(NAME, `Applied null item: ${NULL_ITEM}`);
     }
 
-    if (!player.HasCollectible(MIKU_CONFIG.pocketActive)) {
-      player.SetPocketActiveItem(
-        MIKU_CONFIG.pocketActive,
-        ActiveSlot.POCKET,
-        false,
-      );
-      Debugger.char(MIKU_CONFIG.name, "Give microphone pocket active item");
+    if (!player.HasCollectible(ACTIVE)) {
+      player.AddCollectible(ACTIVE, ActiveSlot.PRIMARY, false);
+      Debugger.char(NAME, "Give microphone active item");
     }
   }
 
@@ -103,16 +86,8 @@ export class MikuCharacter extends Character {
       0,
       icons,
     );
-    eid.addCharacterInfo(
-      PlayerTypeCustom.MIKU,
-      MIKU_CONFIG.description,
-      MIKU_CONFIG.name,
-    );
-    eid.addBirthright(
-      PlayerTypeCustom.MIKU,
-      MIKU_CONFIG.birthrightDesc,
-      MIKU_CONFIG.name,
-    );
-    Debugger.char(MIKU_CONFIG.name, "Setup EID compatibility");
+    eid.addCharacterInfo(PlayerTypeCustom.MIKU, DESCRIPTION, NAME);
+    eid.addBirthright(PlayerTypeCustom.MIKU, BIRTHRIGHT_DESC, NAME);
+    Debugger.eid(NAME, "Setup description and birthright description.");
   }
 }

@@ -6,45 +6,33 @@ import { Debugger } from "../../../util/debug";
 import {
   burnEnemy,
   charmEnemy,
+  confuseEnemy,
   eraseEnemies,
+  fearEnemy,
   freezeEnemy,
   getEnemyKey,
-  isBurnableEnemy,
-  isCharmableEnemy,
-  isFreezableEnemy,
+  isBurnable,
+  isCharmable,
+  isConfusable,
+  isFearable,
+  isFreezable,
+  isMidasFreezable,
+  midasFreezeEnemy,
 } from "../../../util/enemies";
+import { rollChance } from "../../../util/rng";
 import type { GlitchNoteTearData } from "../../tears/GlitchNoteTear/GlitchNoteTear";
 import type { NoteTypeConfig } from "./NotePickup";
 
-/**
- * Represents the different subtypes of musical notes.
- *
- * Each subtype corresponds to a unique visual color and gameplay effect.
- */
+/** Represents the different subtypes of musical note pickups. */
 export enum NotePickupSubType {
-  /** Red Note – Charms enemies temporarily. */
-  RED = 1,
-
-  /** Blue Note – Leaves a creep trail. */
-  BLUE,
-
-  /** Green Note – Poisonous tear that can explode. */
-  GREEN,
-
-  /** Yellow Note – Causes fear, slowing enemies down. */
-  YELLOW,
-
-  /** Purple Note – Homing tears that track enemies. */
-  PURPLE,
-
-  /** Pink Note – Rubber eraser effect; permanently removes enemies. */
-  PINK,
-
-  /** Light Blue Note – Freezes enemies in place. */
-  LIGHT_BLUE,
-
-  /** Orange Note – Ignites enemies, causing burning damage. */
-  ORANGE,
+  SPOOKY = 1,
+  LOVE,
+  TOXIC,
+  GOLDEN,
+  HOMING,
+  ERASER,
+  ICE,
+  FIRE,
 }
 
 /**
@@ -58,122 +46,138 @@ export enum NotePickupSubType {
  * - The effect function that applies the note’s unique behavior to tears.
  */
 export const NOTE_TYPE_DATA: Record<NotePickupSubType, NoteTypeConfig> = {
-  [NotePickupSubType.RED]: {
+  [NotePickupSubType.SPOOKY]: {
+    name: "Spooky Note",
+    description: "Causes fear or slows enemies down.",
+    color: Color(0.15, 0.25, 0.4, 1, 0, 0, 0),
+    weight: 2,
+    uses: 3,
+    applyEffect: (player, tear) => {
+      tear.AddTearFlags(TearFlag.CONFUSION);
+      tear.AddTearFlags(TearFlag.FEAR);
+
+      const tearData = getData<GlitchNoteTearData>(tear);
+      tearData.onHitEnemy = (npc: EntityNPC) => {
+        if (rollChance(50, player.GetDropRNG())) {
+          if (isFearable(npc)) {
+            fearEnemy(npc, 1.5);
+          }
+        } else if (isConfusable(npc)) {
+          confuseEnemy(npc, 2);
+        }
+      };
+    },
+  },
+  [NotePickupSubType.LOVE]: {
     name: "Love Note",
-    description: "Charms enemies forever",
-    color: Color(0.7, 0.2, 0.2, 1, 0, 0, 0),
+    description: "Charms an enemy permanently.",
+    color: Color(0.85, 0.25, 0.25, 1, 0, 0, 0),
     weight: 1,
     uses: 1,
     applyEffect: (_player: EntityPlayer, tear: EntityTear) => {
       const tearData = getData<GlitchNoteTearData>(tear);
       tearData.onHitEnemy = (enemy: EntityNPC) => {
-        if (isCharmableEnemy(enemy)) {
+        if (isCharmable(enemy)) {
           charmEnemy(enemy, 0, true);
         }
       };
     },
   },
-  [NotePickupSubType.BLUE]: {
-    name: "Blue Note",
-    description: "no idea yet ;_;",
-    color: Color(0.2, 0.3, 0.7, 1, 0, 0, 0),
-    weight: 5,
-    uses: 3,
-    applyEffect: (_player, tear) => {
-      tear.AddTearFlags(TearFlag.CREEP_TRAIL);
-    },
-  },
-  [NotePickupSubType.GREEN]: {
-    name: "Poison Note",
-    description: "Poisons and explodes on impact",
-    color: Color(0.2, 0.6, 0.2, 1, 0, 0, 0),
-    weight: 1,
+  [NotePickupSubType.TOXIC]: {
+    name: "Toxic Note",
+    description: "Poisons and explodes on impact.",
+    color: Color(0.25, 0.75, 0.35, 1, 0, 0, 0),
+    weight: 0.5,
     uses: 1,
     applyEffect: (_player, tear) => {
       tear.AddTearFlags(arrayToBitFlags([TearFlag.POISON, TearFlag.EXPLOSIVE]));
     },
   },
-  [NotePickupSubType.YELLOW]: {
-    name: "Scary Note",
-    description: "Slows and fears enemies",
-    color: Color(0.7, 0.6, 0.2, 1, 0, 0, 0),
-    weight: 2,
+  [NotePickupSubType.GOLDEN]: {
+    name: "Greedy Note",
+    description: "Small chance to apply {{ColorGold}}Midas Touch{{CR}}.",
+    color: Color(1, 0.78, 0.15, 1, 0, 0, 0),
+    weight: 1,
     uses: 4,
-    applyEffect: (_player, tear) => {
-      tear.AddTearFlags(TearFlag.SLOW);
+    applyEffect: (player, tear) => {
+      tear.AddTearFlags(TearFlag.MIDAS);
+
+      const tearData = getData<GlitchNoteTearData>(tear);
+      tearData.onHitEnemy = (npc: EntityNPC) => {
+        if (isMidasFreezable(npc) && rollChance(100, player.GetDropRNG())) {
+          midasFreezeEnemy(npc, 3);
+        }
+      };
     },
   },
-  [NotePickupSubType.PURPLE]: {
-    name: "Magic Note",
-    description: "Homing tears that track enemies",
-    color: Color(0.5, 0.2, 0.7, 1, 0, 0, 0),
+  [NotePickupSubType.HOMING]: {
+    name: "Mystic Note",
+    description: "Tears home in on enemies.",
+    color: Color(0.65, 0.3, 0.9, 1, 0, 0, 0),
     weight: 2,
     uses: 3,
     applyEffect: (_player, tear) => {
       tear.AddTearFlags(TearFlag.HOMING);
     },
   },
-  [NotePickupSubType.PINK]: {
+  [NotePickupSubType.ERASER]: {
     name: "Rubber Note",
-    description: "Permanently erases enemies from the run",
-    color: Color(1, 0.4, 0.6, 1, 0, 0, 0),
-    weight: 0.5,
+    description:
+      "Permanently erases enemies.#{{Warning}} Doesn't work on Bosses.",
+    color: Color(1, 0.35, 0.65, 1, 0, 0, 0),
+    weight: 0.1,
     uses: 1,
     applyEffect: (player: EntityPlayer, tear: EntityTear) => {
       const tearData = getData<GlitchNoteTearData>(tear);
-      tearData.onHitEnemy = (enemy: EntityNPC) => {
-        if (!isActiveEnemy(enemy)) {
+      tearData.onHitEnemy = (npc: EntityNPC) => {
+        if (!isActiveEnemy(npc) || npc.IsBoss() || npc.IsInvincible()) {
           return;
         }
 
-        const mikuData = getData<TaintedMikuData>(player);
-
-        mikuData.persistent ??= {
-          notes: [],
-          erased: [],
-        };
-
-        mikuData.persistent.erased ??= [];
-
-        const key = getEnemyKey(enemy);
-        if (mikuData.persistent.erased.includes(key)) {
+        const playerData = getData<TaintedMikuData>(player);
+        playerData.erased ??= [];
+        const key = getEnemyKey(npc);
+        if (playerData.erased.includes(key)) {
           return;
         }
 
-        mikuData.persistent.erased.push(key);
-
+        playerData.erased.push(key);
         SFXManager().Play(SoundEffect.ERASER_HIT);
-        const erased = eraseEnemies(enemy.Type, enemy.Variant);
-        Debugger.char(player.GetName(), `Erased ${erased} enemies.`);
+        const erased = eraseEnemies(npc.Type, npc.Variant);
+        Debugger.char(
+          player.GetName(),
+          `Erased ${erased} enemies. (Type: ${npc.Type}, Variant: ${npc.Variant})`,
+        );
       };
     },
   },
-  [NotePickupSubType.LIGHT_BLUE]: {
+  [NotePickupSubType.ICE]: {
     name: "Freeze Note",
-    description: "Freezes enemies in place temporarily",
-    color: Color(0.5, 0.85, 1, 1, 0, 0, 0),
+    description: "Freezes enemies temporarily.",
+    color: Color(0.4, 0.85, 1, 1, 0, 0, 0),
     weight: 1,
     uses: 3,
     applyEffect: (_player: EntityPlayer, tear: EntityTear) => {
       const tearData = getData<GlitchNoteTearData>(tear);
       tearData.onHitEnemy = (enemy: EntityNPC) => {
-        if (isFreezableEnemy(enemy)) {
+        if (isFreezable(enemy)) {
           freezeEnemy(enemy, 3);
         }
       };
     },
   },
-  [NotePickupSubType.ORANGE]: {
+  [NotePickupSubType.FIRE]: {
     name: "Fiery Note",
-    description: "Ignites enemies on contact",
-    color: Color(1, 0.45, 0.1, 1, 0, 0, 0),
+    description:
+      "{{Warning}} Burning enemies explode on death.#Burns enemies over time.",
+    color: Color(1, 0.5, 0.15, 1, 0, 0, 0),
     weight: 1,
-    uses: 3,
+    uses: 2,
     applyEffect: (_player, tear) => {
       tear.AddTearFlags(TearFlag.BURN);
       const tearData = getData<GlitchNoteTearData>(tear);
       tearData.onHitEnemy = (enemy: EntityNPC) => {
-        if (isBurnableEnemy(enemy)) {
+        if (isBurnable(enemy)) {
           burnEnemy(enemy, 0.4, 3);
         }
       };

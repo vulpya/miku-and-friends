@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 const DEBUG = {
-  RNG: false,
+  RNG: true,
   MATH: false,
   CHARACTERS: false,
-  ITEMS: true,
+  ITEMS: false,
   TEAR: false,
   PICKUP: false,
+  EID: true,
 } as const;
 
 /** Debugging utility functions for the mod. */
@@ -81,5 +82,19 @@ export const Debugger = {
       return;
     }
     print(`[Pickup\\${name}]: ${message}`);
+  },
+  /**
+   * Logs a debug message related to External Item Descriptions.
+   *
+   * Only logs if {@link DEBUG.PICKUP} is enabled.
+   *
+   * @param name The context or source of the `EID` event.
+   * @param message The debug message to log.
+   */
+  eid: (name: string, message: string): void => {
+    if (!DEBUG.EID) {
+      return;
+    }
+    print(`[EID Compat\\${name}]: ${message}`);
   },
 } as const;

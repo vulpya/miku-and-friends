@@ -2,15 +2,17 @@
 
 [![Build](https://github.com/vulpya/miku-and-friends/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/vulpya/miku-and-friends/actions/workflows/build.yml)
 
-A mod adding Hatsune Miku and more Vocaloid-inspired content to The Binding of Isaac
+A mod adding Hatsune Miku and more Vocaloid-inspired content to The Binding of Isaac.
 
 ## Characters
 
-### Hatsune Miku
+### Miku
 
-Miku uses music to charm enemies. Some may even become fans!.
-Her tears have a chance to charm enemies.
-There is also a small chance to charm an enemy permanently.
+Uses her music to charm enemies. Some may even become fans!.
+
+### Miku (Tainted)
+
+Steal the voices of your enemies, turning them into lingering echoes.
 
 ## Disclaimer
 

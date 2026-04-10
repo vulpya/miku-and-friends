@@ -5,5 +5,4 @@
  * @param entity The entity to get data from.
  * @returns The data object stored on the entity, cast to type `T`.
  */
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export const getData = <T>(entity: Entity): T => entity.GetData() as T;
